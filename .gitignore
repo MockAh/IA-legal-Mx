@@ -1,0 +1,23 @@
+# --- .gitignore ---
+__pycache__/
+*.pyc
+
+# Variables de entorno (¡CRÍTICO! No subas tu API KEY)
+.env
+
+# Carpetas de Modelos Pesados (Se descargan con tu script, no se suben)
+modelo_e5/
+mis_modelos/
+
+# Bases de datos Vectoriales (Son generadas, no versionadas)
+procesado-mx/
+chroma_db_*/
+*.sqlite3
+
+# Entornos virtuales
+venv/
+env/
+.venv/
+
+# Bases de Datos
+Axiomas

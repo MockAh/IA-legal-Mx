@@ -1,0 +1,8 @@
+.git
+.gcloudignore
+# IGNORAR CARPETAS PESADAS LOCALES
+modelo_e5/
+procesado-mx/
+procesado-unam/
+venv/
+descargar_modelo.py

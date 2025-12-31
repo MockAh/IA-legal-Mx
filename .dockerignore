@@ -1,0 +1,14 @@
+# Excluir bases de datos locales
+procesado-mx/
+procesado-unam/
+
+# Excluir documentos originales
+Axiomas/
+
+# Excluir entornos virtuales y caché
+venv/
+.env
+__pycache__/
+*.pyc
+.git
+.gitignore

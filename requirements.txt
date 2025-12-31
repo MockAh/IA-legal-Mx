@@ -1,0 +1,24 @@
+# --- Core ---
+gradio==3.50.2
+flask
+gunicorn
+requests
+python-dotenv
+tqdm
+argparse
+
+# --- LangChain ---
+langchain
+langchain-community
+langchain-core
+langchain-huggingface
+langchain-chroma
+
+# --- Datos ---
+chromadb
+sentence-transformers
+torch --index-url https://download.pytorch.org/whl/cpu
+# transformers           <-- ¡BORRADO!
+
+pysqlite3-binary
+python-docx

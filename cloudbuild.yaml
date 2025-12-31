@@ -1,0 +1,44 @@
+steps:
+  # PASO 1: Intentar descargar la imagen base previa (Cache)
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        docker pull gcr.io/$PROJECT_ID/protocolo01-base:latest || exit 0
+
+  # PASO 2: Construir la imagen BASE (Rápido si no hay cambios)
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'gcr.io/$PROJECT_ID/protocolo01-base:latest',
+      '--cache-from', 'gcr.io/$PROJECT_ID/protocolo01-base:latest',
+      '-f', 'Dockerfile.base', '.'
+    ]
+
+  # PASO 3: Construir la imagen de la APP (Usando BUILD_ID para evitar errores)
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'gcr.io/$PROJECT_ID/protocolo01-app:$BUILD_ID',
+      '-t', 'gcr.io/$PROJECT_ID/protocolo01-app:latest',
+      '.'
+    ]
+
+  # PASO 4: Subir las imágenes (Aquí estaba el error antes)
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'push', 
+      'gcr.io/$PROJECT_ID/protocolo01-app:$BUILD_ID'
+    ]
+
+# Opcional: También subimos la etiqueta 'latest' para facilitar despliegues
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'push', 
+      'gcr.io/$PROJECT_ID/protocolo01-app:latest'
+    ]
+
+images:
+  - 'gcr.io/$PROJECT_ID/protocolo01-base:latest'
+  - 'gcr.io/$PROJECT_ID/protocolo01-app:latest'

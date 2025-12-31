@@ -1,0 +1,29 @@
+# nombre_archivo: requirements-local.txt
+
+# --- Core y Desarrollo ---
+gradio==3.50.2
+flask
+gunicorn
+requests
+python-dotenv
+tqdm
+argparse
+python-docx
+# Nota: python-docx es fundamental para leer tus documentos legales.
+
+# --- LangChain ---
+langchain
+langchain-community
+langchain-core
+langchain-huggingface
+langchain-chroma
+langchain-text-splitters
+
+# --- Vector Store ---
+chromadb
+pysqlite3-binary
+
+# --- MOTOR DE EMBEDDINGS (Las dependencias "pesadas" para uso local) ---
+# Importante: Estas librerías permiten la aceleración por GPU.
+transformers
+sentence-transformers
