@@ -31,11 +31,13 @@ except ImportError:
 # 1. --- CONFIGURACIÓN INICIAL ---
 BASE_DIR = Path(__file__).resolve().parent
 INPUT_DOCS_DIR = BASE_DIR / "Axiomas"
-# INPUT_DOCS_DIR = BASE_DIR / "Axiomas-SEGOB" / "legislacion-mx"
 OUTPUT_DIR = BASE_DIR / "procesado-mx" / "principal-mx"
 DB_PATH = OUTPUT_DIR / "chroma_db_mx"
 METADATA_FILE_PATH = OUTPUT_DIR / "metadata.json"
-MAP_FILE_PATH = OUTPUT_DIR / "mapa.json"
+
+# --- CAMBIO IMPORTANTE: SEPARACIÓN DE ESTADO Y REPORTE ---
+SYNC_FILE_PATH = OUTPUT_DIR / "sincro.json" # EL CEREBRO (No tocar)
+MAP_FILE_PATH = OUTPUT_DIR / "mapa.json"            # EL REPORTE (Lectura humana)
 EMBEDDING_MODEL = "intfloat/multilingual-e5-large-instruct"
 
 # --- DETECCIÓN DE HARDWARE ---
@@ -366,119 +368,174 @@ def enrutar_procesamiento(lista_de_parrafos: list[str], metadatos_base: dict) ->
     return chunks_finales
 
 # 3. --- FUNCIÓN PRINCIPAL ---
-
 def main():
-    print(f"--- 🔄 Iniciando Indexador Principal (v5.3 - Incremental Blindado) en {device.upper()} ---")
+    print(f"--- 🔄 Iniciando Indexador (v5.6 - Estado Desacoplado) en {device.upper()} ---")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     
-    # 1. CARGA DE MAPAS (Con normalización de rutas Windows -> Linux)
-    archivos_procesados = {}
+    # 1. CARGA DEL ESTADO DE SINCRONIZACIÓN (LA VERDAD DEL SISTEMA)
+    estado_sincronizacion = {} # Estructura: { "ruta/relativa": timestamp_modificacion }
     chunks_totales = []
     
-    if MAP_FILE_PATH.exists():
-        with open(MAP_FILE_PATH, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            raw_procesados = data.get("archivos_procesados", {})
-            # CORRECCIÓN 1: Normalizamos las claves del JSON para que siempre usen '/'
-            # Esto "arregla" un mapa creado en Windows para que funcione en Linux/Mac
-            archivos_procesados = {k.replace('\\', '/'): v for k, v in raw_procesados.items()}
-            
+    # Intentamos cargar el archivo de sincronización. 
+    # MIGRACIÓN: Si no existe 'sincro.json' pero existe 'mapa.json' antiguo,
+    # podríamos intentar reconstruir, pero para limpieza, asumiremos inicio limpio o archivo existente.
+    if SYNC_FILE_PATH.exists():
+        with open(SYNC_FILE_PATH, "r", encoding="utf-8") as f:
+            estado_sincronizacion = json.load(f)
+    else:
+        print("ℹ️  No se encontró archivo de sincronización. Se creará uno nuevo.")
+
     if METADATA_FILE_PATH.exists():
         with open(METADATA_FILE_PATH, "r", encoding="utf-8") as f:
             chunks_totales = json.load(f)
 
-    # 2. ESCANEO EN DISCO (Forzando formato POSIX)
-    # CORRECCIÓN 2: Usamos .as_posix() en lugar de str(). 
-    # Esto garantiza que 'carpeta/archivo' siempre sea 'carpeta/archivo', incluso en Windows.
-    archivos_disco = {
-        f.relative_to(BASE_DIR).as_posix() for f in INPUT_DOCS_DIR.rglob('*.docx')
-        if f.name not in TODAS_LAS_EXCEPCIONES
-    }
+    # 2. ESCANEO EN DISCO Y COMPARACIÓN (Con detección de cambios)
+    archivos_en_disco_info = {}
     
-    # 3. Lógica de Conjuntos (Set Difference)
-    procesados_set = set(archivos_procesados.keys())
+    # Escaneamos disco y guardamos ruta + fecha de modificación
+    # Excluimos archivos con 'excep' en el último segmento (ej: archivo_excep.docx)
+    raw_files = [f for f in INPUT_DOCS_DIR.rglob('*.docx') 
+                 if f.name not in TODAS_LAS_EXCEPCIONES 
+                 and f.stem.split('_')[-1].lower() != "excep"]
     
-    a_borrar = procesados_set - archivos_disco
-    a_crear = archivos_disco - procesados_set
+    for f in raw_files:
+        ruta_rel = f.relative_to(BASE_DIR).as_posix()
+        mtime = f.stat().st_mtime # Timestamp de última modificación
+        archivos_en_disco_info[ruta_rel] = mtime
+
+    # 3. Lógica de Conjuntos para Determinar Acciones
+    set_disco = set(archivos_en_disco_info.keys())
+    set_sync = set(estado_sincronizacion.keys())
     
-    print(f"📊 Estado: {len(archivos_disco)} archivos válidos (Excluidos: {len(TODAS_LAS_EXCEPCIONES)})")
-    print(f"   ➕ Nuevos: {len(a_crear)} | ➖ Borrar: {len(a_borrar)}")
+    # A) Lo que está en Sync pero ya no en disco -> BORRAR
+    a_borrar = set_sync - set_disco
     
-    # Pausa de seguridad para verificar visualmente antes de operar
-    if len(a_borrar) > 0 and len(a_crear) > 0 and len(a_borrar) == len(a_crear):
-        print("⚠️ ALERTA: Parece que se están borrando y creando la misma cantidad de archivos.")
-        print("   Esto suele indicar un error de rutas (Slash vs Backslash).")
-        # Opcional: input("Presiona Enter para continuar bajo tu riesgo o Ctrl+C para cancelar...")
+    # B) Lo que está en disco pero no en Sync -> CREAR
+    a_crear = set_disco - set_sync
+    
+    # C) Lo que está en ambos, pero la fecha de modificación cambió -> ACTUALIZAR (Borrar + Crear)
+    a_actualizar = set()
+    for archivo in (set_disco & set_sync):
+        mtime_disco = archivos_en_disco_info[archivo]
+        mtime_sync = estado_sincronizacion[archivo]
+        # Si la fecha del disco es distinta a la guardada (con tolerancia pequeña), se actualiza
+        if abs(mtime_disco - mtime_sync) > 1.0: 
+            a_actualizar.add(archivo)
+    
+    # Fusión de listas de tareas
+    total_a_procesar = a_crear | a_actualizar
+    total_a_eliminar = a_borrar | a_actualizar # Para actualizar, primero borramos lo viejo
 
-    if not a_crear and not a_borrar:
-        print("✅ Todo sincronizado. No hay cambios.")
-        return
+    print(f"📊 Estado del Sistema:")
+    print(f"   Archivos en Disco: {len(set_disco)} | Archivos en Sync: {len(set_sync)}")
+    print(f"   ➕ Nuevos: {len(a_crear)} | 🔄 Modificados: {len(a_actualizar)} | ➖ Borrar: {len(a_borrar)}")
+    
+    if not total_a_procesar and not total_a_eliminar:
+        print("✅ Todo sincronizado. Generando reporte actualizado...")
+        # Aún si no hay cambios, regeneramos mapa.json por si el humano lo borró
+        pass 
+    else:
+        # --- CARGA DE MODELO ---
+        print(f"🚀 Cargando modelo e5-large-instruct en {device}...")
+        embeddings = HuggingFaceEmbeddings(
+            model_name=EMBEDDING_MODEL,
+            model_kwargs={'device': device},
+            encode_kwargs={'normalize_embeddings': True}
+        )
+        db = Chroma(persist_directory=str(DB_PATH), embedding_function=embeddings)
 
-    # --- Carga de Modelo y Operaciones ---
-    print(f"🚀 Cargando modelo e5-large-instruct en {device}...")
-    embeddings = HuggingFaceEmbeddings(
-        model_name=EMBEDDING_MODEL,
-        model_kwargs={'device': device},
-        encode_kwargs={'normalize_embeddings': True}
-    )
-    db = Chroma(persist_directory=str(DB_PATH), embedding_function=embeddings)
-
-    # --- BORRADO ---
-    if a_borrar:
-        print(f"🗑️  Eliminando {len(a_borrar)} archivos antiguos de la DB...")
-        # Convertimos ruta relativa a nombre de archivo para borrar en Chroma (donde source=filename)
-        sources_borrar = {os.path.basename(f) for f in a_borrar}
-        
-        for src in sources_borrar:
-            try: 
-                print(f"   - Borrando chunks de: {src}")
-                db.delete(where={"source": src})
-            except Exception as e: 
-                print(f"   Error borrando {src}: {e}")
-        
-        # Limpieza de metadatos JSON
-        chunks_totales = [c for c in chunks_totales if c["source"] not in sources_borrar]
-        for f in a_borrar: del archivos_procesados[f]
-
-    # --- CREACIÓN ---
-    if a_crear:
-        print(f"🔨 Procesando {len(a_crear)} archivos nuevos...")
-        # Convertimos las rutas POSIX de vuelta a objetos Path para que Python las lea bien
-        files_list = [BASE_DIR / f for f in a_crear]
-        
-        for fpath in tqdm(files_list):
-            paras = extraer_parrafos_limpios_de_docx(fpath)
-            if not paras: continue
-            
-            meta = parse_filename_for_metadata(fpath)
-            
-            # ROUTER
-            chunks = enrutar_procesamiento(paras, meta)
-            
-            if chunks:
-                docs = [Document(page_content=c.pop("texto_chunk"), metadata=c) for c in chunks]
-                db.add_documents(docs)
+        # --- EJECUCIÓN DE BORRADOS ---
+        if total_a_eliminar:
+            print(f"🗑️  Eliminando {len(total_a_eliminar)} registros obsoletos...")
+            for ruta_relativa in total_a_eliminar:
+                filename_original = os.path.basename(ruta_relativa)
                 
-                # Re-inyectamos el texto en metadata para el JSON de respaldo
-                for d in docs: 
-                    d.metadata["texto_chunk"] = d.page_content
-                    chunks_totales.append(d.metadata)
+                # Borrar de Chroma
+                try:
+                    db.delete(where={"source": filename_original})
+                except Exception:
+                    pass # Puede no existir si falló una carga previa
                 
-                # Guardamos en el mapa usando la ruta POSIX
-                archivos_procesados[fpath.relative_to(BASE_DIR).as_posix()] = {"chunks": len(chunks)}
+                # Borrar de Metadata (memoria JSON)
+                chunks_totales = [c for c in chunks_totales if c.get("source") != filename_original]
+                
+                # Borrar de Estado Sync
+                if ruta_relativa in estado_sincronizacion:
+                    del estado_sincronizacion[ruta_relativa]
 
-    # Guardado Final
-    print("💾 Guardando metadatos y mapa actualizado...")
-    with open(METADATA_FILE_PATH, "w", encoding="utf-8") as f:
-        json.dump(chunks_totales, f, indent=4, ensure_ascii=False)
+        # --- EJECUCIÓN DE CREACIONES / ACTUALIZACIONES ---
+        if total_a_procesar:
+            print(f"🔨 Procesando {len(total_a_procesar)} archivos...")
+            lista_archivos = [BASE_DIR / f for f in total_a_procesar]
+            
+            for fpath in tqdm(lista_archivos):
+                ruta_rel_posix = fpath.relative_to(BASE_DIR).as_posix()
+                paras = extraer_parrafos_limpios_de_docx(fpath)
+                
+                if not paras: 
+                    # Si falla lectura, no actualizamos sync para reintentar luego
+                    continue 
+                
+                meta = parse_filename_for_metadata(fpath)
+                chunks = enrutar_procesamiento(paras, meta)
+                
+                if chunks:
+                    docs = [Document(page_content=c.pop("texto_chunk"), metadata=c) for c in chunks]
+                    db.add_documents(docs)
+                    
+                    # Agregar a metadata global
+                    for d in docs: 
+                        d.metadata["texto_chunk"] = d.page_content
+                        chunks_totales.append(d.metadata)
+                    
+                    # ACTUALIZAR EL ESTADO DE SINCRONIZACIÓN
+                    # Guardamos la fecha de modificación actual del archivo
+                    estado_sincronizacion[ruta_rel_posix] = archivos_en_disco_info[ruta_rel_posix]
+
+        # --- GUARDADO FINAL DE SISTEMA ---
+        print("💾 Guardando bases de datos de sistema...")
+        # 1. Metadata Global
+        with open(METADATA_FILE_PATH, "w", encoding="utf-8") as f:
+            json.dump(chunks_totales, f, indent=4, ensure_ascii=False)
+        
+        # 2. Sincronización (Estado Técnico)
+        with open(SYNC_FILE_PATH, "w", encoding="utf-8") as f:
+            json.dump(estado_sincronizacion, f, indent=4)
+
+    # --- GENERACIÓN DE REPORTE HUMANO (MAPA.JSON) ---
+    # Esto ocurre SIEMPRE al final, independientemente de si hubo cambios o no.
+    # Reconstruye el mapa basándose puramente en lo que el sistema sabe ahora.
+    print("📝 Generando reporte legible (mapa.json)...")
     
+    mapa_legible = {}
+    # Agrupamos chunks por archivo para el reporte
+    conteo_chunks = defaultdict(int)
+    for c in chunks_totales:
+        if "source" in c:
+            conteo_chunks[c["source"]] += 1
+            
+    for ruta, mtime in estado_sincronizacion.items():
+        filename = os.path.basename(ruta)
+        mapa_legible[ruta] = {
+            "status": "sincronizado",
+            "chunks_en_db": conteo_chunks.get(filename, 0),
+            "ultima_modificacion": datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M:%S')
+        }
+
     with open(MAP_FILE_PATH, "w", encoding="utf-8") as f:
         json.dump({
-            "updated": datetime.now().isoformat(),
-            "archivos_procesados": archivos_procesados
+            "report_date": datetime.now().isoformat(),
+            "note": "Este archivo se genera automáticamente. Puedes borrarlo o editarlo sin afectar el sistema.",
+            "resumen_sesion": {
+                "archivos_nuevos": len(a_crear),
+                "archivos_actualizados": len(a_actualizar),
+                "archivos_eliminados": len(a_borrar)
+            },
+            "total_files": len(mapa_legible),
+            "archivos": mapa_legible
         }, f, indent=4, ensure_ascii=False)
 
-    print("🎉 Sincronización terminada.")
+    print("🎉 Proceso finalizado.")
 
 if __name__ == "__main__":
     main()

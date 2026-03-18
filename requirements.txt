@@ -19,6 +19,8 @@ chromadb
 sentence-transformers
 torch --index-url https://download.pytorch.org/whl/cpu
 # transformers           <-- ¡BORRADO!
+numpy
+faiss-cpu
 
 pysqlite3-binary
 python-docx
