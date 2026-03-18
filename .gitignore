@@ -21,3 +21,10 @@ env/
 
 # Bases de Datos
 Axiomas
+
+#Base titulos
+faiss-lista
+
+# Otros
+llamada_deepseek.txt
+*:Zone.Identifier

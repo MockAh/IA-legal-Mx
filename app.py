@@ -1,221 +1,343 @@
 import os
 import sys
+import time
 from pathlib import Path
 
-# --- 1. PARCHE CRÍTICO INTELIGENTE (Funciona en Local y Nube) ---
+# --- 1. PARCHE CRÍTICO ---
 try:
     __import__('pysqlite3')
     sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
-    print("☁️  Parche SQLite aplicado (Entorno Cloud/Linux detected)")
+    print("☁️  Parche SQLite aplicado")
 except ImportError:
-    print("💻 Modo Local detectado: Usando SQLite nativo (Parche omitido)")
+    print("💻 Modo Local detectado")
 
 import gradio as gr
 import chromadb
 from dotenv import load_dotenv
 from langchain_huggingface import HuggingFaceEmbeddings
 
-# --- Módulos Nuevos ---
+# --- Módulos Lógicos ---
 from logica_a import logica_a_cita_precisa
-from logica_b import logica_b_explicacion_juridica
-from logica_c import logica_c_avanzada 
+from logica_b import logica_b_streaming
+from logica_c import logica_c_avanzada
+from catalogo_axiomas import generar_catalogo
 
 load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent
-COLLECTION_NAME = "langchain"
 
-# --- Variables Globales ---
-EMBEDDING_FUNCTION = None
-COLS_LEGALES = []
-COL_TRAMITES = None
-COL_SEGOB = None
-COL_FCE = None
+# --- INICIALIZACIÓN FAISS ---
+print("\n" + "="*60)
+print("🔧 Inicializando índices FAISS...")
+print("="*60)
+try:
+    import init_faiss
+    init_faiss.main()
+except Exception as e:
+    print(f"⚠️  Advertencia al inicializar FAISS: {e}")
+    print("   La búsqueda semántica de títulos podría no estar disponible.")
 
-def cargar_recursos(scope: str):
-    """Carga modelos y DBs según el scope seleccionado."""
-    global EMBEDDING_FUNCTION, COLS_LEGALES, COL_TRAMITES, COL_SEGOB, COL_FCE
-    
-    print(f"🔄 Cargando recursos para Scope: {scope}...")
-    
-    # 1. Cargar Modelo (Solo una vez)
-    if EMBEDDING_FUNCTION is None:
-        print("🧠 Cargando modelo E5 en CPU...")
+# --- 2. GESTIÓN DE RECURSOS (Singleton para Concurrencia) ---
+RECURSOS_CACHE = {
+    "modelo": None,
+    "clientes_chroma": {}
+}
+
+def get_embedding_function():
+    if RECURSOS_CACHE["modelo"] is None:
         try:
-            EMBEDDING_FUNCTION = HuggingFaceEmbeddings(
-                model_name="./modelo_e5", 
-                model_kwargs={'device': 'cpu'}
+            RECURSOS_CACHE["modelo"] = HuggingFaceEmbeddings(
+                model_name="./modelo_e5", model_kwargs={'device': 'cpu'}
             )
-        except Exception as e:
-            print(f"⚠️ Error cargando modelo local (posiblemente en entorno de prueba): {e}")
-            # Fallback para pruebas si no tienes el modelo descargado
-            EMBEDDING_FUNCTION = HuggingFaceEmbeddings(model_name="intfloat/multilingual-e5-large")
+        except:
+            RECURSOS_CACHE["modelo"] = HuggingFaceEmbeddings(
+                model_name="intfloat/multilingual-e5-large"
+            )
+    return RECURSOS_CACHE["modelo"]
 
-    # 2. Definir rutas (AJUSTADAS A TU ESTRUCTURA REAL)
-    rutas_legales = []
-    ruta_tramites = None
-    ruta_segob = None # Inicializamos
-    
-    if scope.lower() == 'unam':
-        rutas_legales = [BASE_DIR / "procesado-unam" / "chroma_db_unam"]
-    elif scope.lower() == 'mx':
-        # ESTRUCTURA CORREGIDA SEGÚN TU 'ls'
-        rutas_legales = [
-            BASE_DIR / "procesado-mx" / "principal-mx" / "chroma_db_mx",
-            BASE_DIR / "procesado-mx" / "excep-mx" / "chroma_db_excep_mx"
-        ]
-        # Trámites y Segob viven DENTRO de procesado-mx
-        ruta_tramites = BASE_DIR / "procesado-mx" / "tramites-mx" / "chroma_db_tramites_mx"
-        
-        # OJO AQUÍ: Asumiendo que dentro de segob-mx hay un chroma_db o es la carpeta misma.
-        # Ajusta "chroma_db_segob" si tu carpeta interna tiene otro nombre, o quítalo si "segob-mx" es la DB directa.
-        ruta_segob = BASE_DIR / "procesado-mx" / "segob-mx" / "chroma_db_segob" 
-
-    # 3. Conectar ChromaDB Legal
-    COLS_LEGALES = []
-    for ruta in rutas_legales:
-        if ruta.exists():
+def get_db_collection(path_str, collection_name="langchain"):
+    if path_str not in RECURSOS_CACHE["clientes_chroma"]:
+        if os.path.exists(path_str):
             try:
-                client = chromadb.PersistentClient(path=str(ruta))
-                COLS_LEGALES.append(client.get_or_create_collection(COLLECTION_NAME))
-                print(f"  ✅ Legal cargado: {ruta.name}")
+                client = chromadb.PersistentClient(path=path_str)
+                col = client.get_or_create_collection(collection_name)
+                RECURSOS_CACHE["clientes_chroma"][path_str] = col
             except Exception as e:
-                print(f"  ❌ Error cargando Legal {ruta.name}: {e}")
+                print(f"Error cargando DB {path_str}: {e}")
+                return None
+        else:
+            return None
+    return RECURSOS_CACHE["clientes_chroma"].get(path_str)
 
-    # 4. Conectar ChromaDB Trámites (CON DIAGNÓSTICO)
-    COL_TRAMITES = None
-    if ruta_tramites and ruta_tramites.exists():
-        try:
-            print(f"  📂 Intentando cargar Trámites desde: {ruta_tramites}")
-            client_t = chromadb.PersistentClient(path=str(ruta_tramites))
-            
-            # --- CHISMOSO: ¿Cómo se llaman las colecciones aquí? ---
-            nombres_cols = [c.name for c in client_t.list_collections()]
-            print(f"  👀 Colecciones en Trámites: {nombres_cols}")
-            
-            # Intentamos cargar 'tramites_gob_mx', si falla, probamos 'langchain'
-            target_col = "tramites_gob_mx"
-            if target_col not in nombres_cols and "langchain" in nombres_cols:
-                target_col = "langchain"
-            
-            COL_TRAMITES = client_t.get_collection(target_col) 
-            print(f"  ✅ Trámites cargado correctamente (Colección: {target_col})")
-        except Exception as e:
-            print(f"  ⚠️ Error cargando trámites: {e}")
-    else:
-        print(f"  🚫 Ruta Trámites NO encontrada: {ruta_tramites}")
-
-    # 5. Conectar ChromaDB SEGOB (CON DIAGNÓSTICO)
-    COL_SEGOB = None
-    if ruta_segob and ruta_segob.exists():
-        try:
-            print(f"  📂 Intentando cargar SEGOB desde: {ruta_segob}")
-            client_s = chromadb.PersistentClient(path=str(ruta_segob))
-            
-            # --- CHISMOSO: ¿Cómo se llaman las colecciones aquí? ---
-            nombres_cols_s = [c.name for c in client_s.list_collections()]
-            print(f"  👀 Colecciones en SEGOB: {nombres_cols_s}")
-            
-            COL_SEGOB = client_s.get_or_create_collection("langchain")
-            print("  🎖️ Biblioteca SEGOB cargada con éxito.")
-        except Exception as e:
-            print(f"  ⚠️ Error cargando SEGOB: {e}")
-    else:
-         print(f"  🚫 Ruta SEGOB NO encontrada: {ruta_segob}")
-
-    # 6. Conectar ChromaDB FCE (principal-mx y excep-mx)
-    COL_FCE = []
-    rutas_fce = []
-    if scope.lower() == 'mx':
-        ruta_fce_principal = BASE_DIR / "procesado-mx" / "principal-mx" / "chroma_db_mx"
-        ruta_fce_excep = BASE_DIR / "procesado-mx" / "excep-mx" / "chroma_db_excep_mx"
-        rutas_fce = [ruta_fce_principal, ruta_fce_excep]
-        for ruta_fce in rutas_fce:
-            if ruta_fce.exists():
-                try:
-                    print(f"  📂 Intentando cargar FCE desde: {ruta_fce}")
-                    client_fce = chromadb.PersistentClient(path=str(ruta_fce))
-                    col_fce = client_fce.get_or_create_collection("langchain")
-                    COL_FCE.append(col_fce)
-                    print(f"  📚 Base de datos FCE cargada con éxito: {ruta_fce.name}")
-                except Exception as e:
-                    print(f"  ⚠️ Error cargando FCE: {e}")
-            else:
-                print(f"  🚫 Ruta FCE NO encontrada: {ruta_fce}")
-        print(f"  🟣 Diagnóstico FCE: Se han cargado {len(COL_FCE)} colecciones (esperadas: 2). Rutas: {[str(r) for r in rutas_fce]}")
-
-    return "Recursos Listos"
-
-def chat_interface(mensaje, historial, modo, scope):
-    # Asegurar carga de recursos si cambió el scope o es el inicio
-    cargar_recursos(scope)
+def obtener_colecciones_por_modo(modo):
+    """Retorna las colecciones específicas según el modo seleccionado."""
     
-    if not COLS_LEGALES:
-        respuesta = "❌ Error: No se cargaron bases de datos legales."
-        historial.append([mensaje, respuesta])
-        return "", historial
+    # Rutas relativas a BASE_DIR
+    rutas = {
+        "basic_mx": BASE_DIR / "procesado-mx" / "basic-mx" / "chroma_db_basic",
+        "segob_mx": BASE_DIR / "procesado-mx" / "segob-mx" / "chroma_db_segob",
+        "transp_mx": BASE_DIR / "procesado-mx" / "transp-mx" / "chroma_db_transp",
+        "3p_mx": BASE_DIR / "procesado-mx" / "3p-mx" / "chroma_db_3p",
+        "fce_mx": BASE_DIR / "procesado-mx" / "fce-mx" / "chroma_db_fce",
+        "tramites_mx": BASE_DIR / "procesado-mx" / "tramites-mx" / "chroma_db_tramites_mx",
+    }
+    
+    cols_legales = []
+    col_tramites = None
+    col_segob = None
+    
+    if modo == "Cita Precisa":
+        # Incluye todas las colecciones legales disponibles
+        for key in ["basic_mx", "segob_mx", "transp_mx", "3p_mx", "fce_mx"]:
+            c = get_db_collection(str(rutas[key]))
+            if c: cols_legales.append(c)
+    
+    elif modo == "Razonamiento Jurídico":
+        # Solo: basic-mx, segob-mx, transp-mx, 3p-mx
+        for key in ["basic_mx", "segob_mx", "transp_mx", "3p_mx"]:
+            c = get_db_collection(str(rutas[key]))
+            if c: cols_legales.append(c)
+    
+    elif modo == "FCE":
+        # Solo: fce-mx
+        c = get_db_collection(str(rutas["fce_mx"]))
+        if c: cols_legales.append(c)
+    
+    elif modo == "Trámites SEGOB":
+        # Para este modo, retorna segob + tramites
+        col_segob = get_db_collection(str(rutas["segob_mx"]))
+        col_tramites = get_db_collection(str(rutas["tramites_mx"]), "tramites_gob_mx")
+        if not col_tramites:
+            col_tramites = get_db_collection(str(rutas["tramites_mx"]), "langchain")
+    
+    return cols_legales, col_tramites, col_segob
 
-    respuesta = ""
+# --- 3. LÓGICA DE INTERFAZ (NUEVA ARQUITECTURA) ---
+
+def user_submit(mensaje, historial):
+    """
+    1. Agrega mensaje del usuario al historial.
+    2. Limpia el input.
+    3. Retorna historial actualizado y input vacío.
+    """
+    if not mensaje:
+        return "", historial
+    return "", historial + [[mensaje, None]]
+
+def stream_response(historial, modo):
+    """
+    Generador que alimenta el 'Buffer de Streaming' (Markdown)
+    NO toca el historial del chatbot.
+    """
+    if not historial:
+        yield "..."
+        return
+
+    mensaje = historial[-1][0]
+    embedding_fn = get_embedding_function()
+    cols_legales, col_tramites, col_segob = obtener_colecciones_por_modo(modo)
+    
+    buffer_texto = ""
+
+    # Validación según el modo
+    if modo in ["Cita Precisa", "Razonamiento Jurídico", "FCE"] and not cols_legales:
+        yield "❌ Error: No se encontraron bases de datos para este modo."
+        return
+    
+    if modo == "Trámites SEGOB" and (not col_segob or not col_tramites):
+        yield "❌ Error: Colecciones de SEGOB o Trámites no disponibles."
+        return
+
     try:
         if modo == "Cita Precisa":
-            respuesta = logica_a_cita_precisa(COLS_LEGALES, EMBEDDING_FUNCTION, mensaje)
-
+            buffer_texto = logica_a_cita_precisa(cols_legales, embedding_fn, mensaje)
+            yield buffer_texto
+        
         elif modo == "Razonamiento Jurídico":
-            # 1. Creamos una lista combinada con las Leyes Generales
-            fuentes_para_b = COLS_LEGALES.copy() 
-            
-            # 2. Si existe la base de SEGOB (y estamos en Scope MX), la agregamos
-            if COL_SEGOB:
-                fuentes_para_b.append(COL_SEGOB)
-            
-            # 3. La Lógica B ahora buscará en AMBOS lugares
-            respuesta = logica_b_explicacion_juridica(fuentes_para_b, EMBEDDING_FUNCTION, mensaje)
+            generador = logica_b_streaming(cols_legales, embedding_fn, mensaje)
+            for fragmento in generador:
+                buffer_texto = fragmento
+                yield buffer_texto
         
         elif modo == "FCE":
-            # Búsqueda en principal-mx y excep-mx (FCE)
-            if COL_FCE and len(COL_FCE) > 0:
-                respuesta = logica_b_explicacion_juridica(COL_FCE, EMBEDDING_FUNCTION, mensaje)
-            else:
-                respuesta = "❌ Las bases de datos FCE no están disponibles. Asegúrate de que 'principal-mx' y 'excep-mx' estén correctamente cargadas."
+            generador = logica_b_streaming(cols_legales, embedding_fn, mensaje)
+            for fragmento in generador:
+                buffer_texto = fragmento
+                yield buffer_texto
         
-        elif modo == "Trámites (SEGOB)":
-            respuesta = logica_c_avanzada(COL_SEGOB, COL_TRAMITES, EMBEDDING_FUNCTION, mensaje)
-        else:
-            respuesta = "⚠️ La base de datos de Trámites no está disponible en este Scope (solo 'MX'). Cambiando a explicación legal:\n\n" 
-            respuesta += logica_b_explicacion_juridica(COLS_LEGALES, EMBEDDING_FUNCTION, mensaje)
-        
+        elif modo == "Trámites SEGOB":
+            yield "⏳ Procesando solicitud de trámites..."
+            buffer_texto = logica_c_avanzada(col_segob, col_tramites, embedding_fn, mensaje)
+            yield buffer_texto
+
     except Exception as e:
-        respuesta = f"❌ Error interno: {str(e)}"
+        yield f"❌ Error: {str(e)}"
 
-    # Agregar al historial en formato compatible con Gradio Chatbot (lista de tuplas)
-    historial.append([mensaje, respuesta])
-    return "", historial
-
-# --- Tema Personalizado: Morado, Negro y Blanco ---
-tema_personalizado = gr.themes.Soft(
-    primary_hue="purple",
-    secondary_hue="slate"
-)
-
-# --- Interfaz ---
-with gr.Blocks(theme=tema_personalizado, css="""
-    footer {visibility: hidden}
-    .gradio-container {background-color: #FFFFFF;}
-    h1 {color: #5B21B6; text-shadow: 2px 2px 4px rgba(0,0,0,0.1);}
-""") as demo:
-    gr.Markdown("# 🚨⚖️ Juez Scharseinegger 2.0")
+def consolidar_respuesta(historial, buffer_final):
+    """
+    Al final del streaming, toma el texto del buffer y lo 'graba'
+    en el historial permanente del chatbot. Limpia el buffer.
+    """
+    if not historial:
+        return historial, ""
     
-    with gr.Row():
-        modo_radio = gr.Radio(
-            ["Cita Precisa", "Razonamiento Jurídico", "FCE", "Trámites (SEGOB)"],
-            value="Razonamiento Jurídico",
-            label="Modo de Respuesta"
-        )
-        scope_radio = gr.Radio(["UNAM", "MX"], value="MX", label="Ámbito (Scope)")
+    # Actualizamos el último mensaje (que era None) con la respuesta final
+    historial[-1][1] = buffer_final
+    return historial, "" # Retorna historial lleno y buffer vacío
 
-    chatbot = gr.Chatbot(height=500)
-    txt_mensaje = gr.Textbox(placeholder="Escribe tu consulta legal o de trámite...")
+# --- 4. INTERFAZ GRÁFICA ---
 
-    txt_mensaje.submit(chat_interface, [txt_mensaje, chatbot, modo_radio, scope_radio], [txt_mensaje, chatbot])
+tema = gr.themes.Soft(primary_hue="orange", secondary_hue="blue")
+css = """
+.gradio-container {background-color: #FFFDF7;}
+footer {display: none !important;}
+
+/* Estilo para el bloque de texto legal */
+blockquote {
+    border-left: 4px solid #E65100; /* Naranja profundo */
+    background-color: #FFF3E0;
+    padding: 15px;
+    margin: 10px 0;
+    line-height: 1.6; /* Mejora la lectura de párrafos largos */
+    color: #212121;
+}
+
+/* Resaltado de los números de párrafo */
+blockquote strong {
+    color: #1565C0;
+    font-variant: small-caps;
+}
+
+/* Centrar el contenedor del texto dentro de la caja de Gradio */
+.contenedor-legal {
+    width: 90%;            /* Ocupa el 90% del ancho para dejar márgenes */
+    margin: 20px auto;     /* Centra el bloque horizontalmente */
+    padding: 15px;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+
+/* Estilo para cada párrafo: Justificado y con Sangría Sencilla */
+.parrafo-legal {
+    text-align: justify;   /* Texto Justificado */
+    text-indent: 40px;     /* Sangría en la primera línea */
+    margin-bottom: 1.2em;  /* Espacio entre párrafos */
+    line-height: 1.5;      /* Interlineado cómodo para lectura legal */
+    color: #1a1a1a;
+    font-family: 'Times New Roman', serif; /* Opcional: fuente más tradicional */
+    user-select: text;
+}
+"""
+
+with gr.Blocks(theme=tema, css=css) as demo:
+    gr.Markdown("# ⚖️🔶 Wall-E Legal 2.0")
+
+    with gr.Tabs():
+        # ========== PESTAÑA 1: AGENTE IA ==========
+        with gr.Tab("⚖️ Agente IA"):
+            modo_radio = gr.Radio(
+                ["Cita Precisa", "Razonamiento Jurídico", "FCE", "Trámites SEGOB"],
+                value="Razonamiento Jurídico",
+                label="Modo"
+            )
+
+            # 1. EL CHATBOT (Estático durante streaming)
+            chatbot = gr.Chatbot(
+                height=400, 
+                label="Historial", 
+                bubble_full_width=False,
+                show_copy_button=True
+            )
+
+            # 2. EL BUFFER DE STREAMING (Aquí ocurre la magia)
+            # Visible solo cuando se genera texto
+            lbl_status = gr.Markdown("### 🤖 Respuesta en curso:", visible=False)
+            buffer_streaming = gr.Markdown(visible=False, elem_classes="buffer-container")
+            
+            # 3. ENTRADA
+            with gr.Row():
+                txt_mensaje = gr.Textbox(
+                    placeholder="Escribe tu consulta...", 
+                    show_label=False,
+                    autofocus=True,
+                    lines=1,
+                    scale=5
+                )
+                btn_enviar = gr.Button("📤 Enviar", scale=1)
+
+        # ========== PESTAÑA 2: BASE DE DATOS DISPONIBLE ==========
+        with gr.Tab("📚 Base de datos disponible"):
+            btn_actualizar = gr.Button("🔄 Actualizar catálogo", scale=1)
+            catalogo_md = gr.Markdown(value=generar_catalogo())
+            btn_actualizar.click(
+                fn=generar_catalogo,
+                outputs=[catalogo_md]
+            )
+
+    # --- FLUJO DE EVENTOS (PIPELINE) ---
+    
+    # Paso A: Usuario envía -> Limpia input, añade pregunta a Chatbot (Respuesta=None)
+    # Ambos (Enter y botón) disparan el mismo flujo
+    evento_submit = txt_mensaje.submit(
+        fn=user_submit,
+        inputs=[txt_mensaje, chatbot],
+        outputs=[txt_mensaje, chatbot],
+        queue=False
+    )
+    
+    # El botón también dispara el mismo flujo
+    btn_click = btn_enviar.click(
+        fn=user_submit,
+        inputs=[txt_mensaje, chatbot],
+        outputs=[txt_mensaje, chatbot],
+        queue=False
+    )
+    
+    # Paso B: Activar visibilidad del Buffer (para ambos eventos)
+    evento_visibilidad = evento_submit.then(
+        fn=lambda: (gr.update(visible=True), gr.update(visible=True, value="⏳ Iniciando análisis...")),
+        outputs=[lbl_status, buffer_streaming]
+    )
+    
+    btn_visibilidad = btn_click.then(
+        fn=lambda: (gr.update(visible=True), gr.update(visible=True, value="⏳ Iniciando análisis...")),
+        outputs=[lbl_status, buffer_streaming]
+    )
+
+    # Paso C: STREAMING -> Actualiza SOLO el Buffer Markdown (El Chatbot NO se toca)
+    evento_stream = evento_visibilidad.then(
+        fn=stream_response,
+        inputs=[chatbot, modo_radio],
+        outputs=[buffer_streaming]
+    )
+    
+    btn_stream = btn_visibilidad.then(
+        fn=stream_response,
+        inputs=[chatbot, modo_radio],
+        outputs=[buffer_streaming]
+    )
+
+    # Paso D: CONSOLIDACIÓN -> Copia Buffer a Chatbot y oculta Buffer
+    evento_stream.then(
+        fn=consolidar_respuesta,
+        inputs=[chatbot, buffer_streaming],
+        outputs=[chatbot, buffer_streaming]
+    ).then(
+        fn=lambda: (gr.update(visible=False), gr.update(visible=False)),
+        outputs=[lbl_status, buffer_streaming]
+    )
+    
+    btn_stream.then(
+        fn=consolidar_respuesta,
+        inputs=[chatbot, buffer_streaming],
+        outputs=[chatbot, buffer_streaming]
+    ).then(
+        fn=lambda: (gr.update(visible=False), gr.update(visible=False)),
+        outputs=[lbl_status, buffer_streaming]
+    )
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 8080)))
+    demo.queue().launch(
+        server_name="0.0.0.0", 
+        server_port=int(os.environ.get("PORT", 8080))
+    )
