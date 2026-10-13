@@ -1,103 +1,85 @@
-import os
+# catalogo_axiomas.py
+import pickle
 from pathlib import Path
 
-# Configuración de rutas según tu estructura
 BASE_DIR = Path(__file__).resolve().parent
-# Ahora apuntamos directamente a la médula del proyecto
-PROCESADO_DIR = BASE_DIR / "Axiomas" / "legislacion-mx"
+# Apuntamos a donde tu startup.sh descarga los índices
+METADATA_PATH = BASE_DIR / "faiss-lista" / "metadata_titulos_leyes.pkl"
 
-# 1. Definición de Headliners Principales (Categorías Nivel 1)
-HEADLINERS = {
-    "FCE": "✒️ Fondo de Cultura Económica",
-    "Transparencia": "🛡️ Transparencia y Acceso a la Información",
-    "Tres_Poderes": "🏛️ Los Tres Poderes",
-    "basic": "⚖️ Legislación Básica",
-    "segob": "🧱 Secretaría de Gobernación (SEGOB)"
+# Categorías derivadas de Axiomas/legislacion-mx/<subcarpeta>
+CATEGORIAS = {
+    "basic":         "📜 Legislación Básica",
+    "FCE":           "📘 Fondo de Cultura Económica",
+    "segob":         "🏛️ Secretaría de Gobernación",
+    "Transparencia": "🔍 Transparencia",
+    "Tres_Poderes":  "⚖️ Tres Poderes",
 }
 
-# 2. Mapeo de subcarpetas (Nivel 2 o inferior)
-SUB_NOMBRES = {
-    "1_comercializacion": "Comercialización",
-    "2_editorial": "Área Editorial",
-    "3_mercadotecnia": "Mercadotecnia",
-    "sustantiva": "Normatividad Sustantiva",
-    "General-Juridica": "General Jurídica",
-    "estatuto_organico": "Estatuto Orgánico"
-}
+MARCADOR_RUTA = "legislacion-mx/"
 
-TIPOS_PROCESAMIENTO = {
-    "legal": "[legal]",
-    "semantic": "[semántico]",
-    "excep": "[excepción]",
-}
 
-def _nombre_legible(archivo: Path) -> str:
-    """Parsea el nombre del archivo para la interfaz."""
-    nombre_raw = archivo.stem
-    partes = nombre_raw.split("_")
-    
-    if len(partes) < 3:
-        return f"📄 {nombre_raw.replace('-', ' ')}"
+def _extraer_categoria(ruta: str) -> str:
+    """Extrae la subcarpeta principal después de 'legislacion-mx/' en la ruta."""
+    idx = ruta.find(MARCADOR_RUTA)
+    if idx == -1:
+        return "Otros"
+    resto = ruta[idx + len(MARCADOR_RUTA):]
+    subcarpeta = resto.split("/")[0] if "/" in resto else resto
+    return subcarpeta if subcarpeta in CATEGORIAS else "Otros"
 
-    fecha = partes[0]
-    tipo_key = partes[-1].lower()
-    # Extraer el título (lo que está entre la fecha/clave y el tipo)
-    titulo_raw = " ".join(partes[2:-1]) if len(partes) > 3 else partes[1]
-    
-    titulo = titulo_raw.replace("-", " ").title()
-    etiqueta = TIPOS_PROCESAMIENTO.get(tipo_key, "📄")
-
-    return f"{etiqueta} {titulo} *({fecha})*"
 
 def generar_catalogo() -> str:
-    """Genera el catálogo Markdown respetando la jerarquía solicitada."""
-    if not PROCESADO_DIR.exists():
-        return f"⚠️ No se encontró la ruta: `{PROCESADO_DIR}`"
+    """Genera el catálogo Markdown agrupado en 5 subconjuntos leyendo la memoria de FAISS."""
 
-    lineas = [
-        "## 🏛️ Acervo Documental del Juez Scharseinegger\n",
-        "Selecciona un documento para referencia o consulta su estado actual en la base de datos.\n",
-        "---"
-    ]
+    if not METADATA_PATH.exists():
+        return f"⚠️ No se encontró la base de datos de títulos en: `{METADATA_PATH}`. Verifica que 'faiss-lista' exista."
 
-    # Iteramos sobre los headliners en el orden definido
-    for carpeta_id, titulo_headliner in HEADLINERS.items():
-        ruta_categoria = PROCESADO_DIR / carpeta_id
-        
-        if not ruta_categoria.exists():
-            continue
+    try:
+        with open(METADATA_PATH, 'rb') as f:
+            metadata_list = pickle.load(f)
 
-        # Título Principal (H2)
-        lineas.append(f"\n## {titulo_headliner}")
-        
-        # Escaneamos la carpeta del headliner
-        # Usamos rglob para capturar archivos en la raíz del headliner y en subcarpetas
-        archivos_encontrados = False
-        
-        # Agrupamos por subcarpeta para mantener el orden
-        for raiz, dirs, archivos in sorted(os.walk(ruta_categoria)):
-            # Filtrar solo .docx válidos
-            docs = sorted([f for f in archivos if f.endswith(".docx") and "Zone.Identifier" not in f])
-            
-            if not docs:
+        if not metadata_list:
+            return "📭 La biblioteca FAISS está cargada pero no contiene títulos registrados."
+
+        # Agrupar títulos únicos por categoría
+        grupos: dict[str, set[str]] = {cat: set() for cat in CATEGORIAS}
+        grupos["Otros"] = set()
+
+        for m in metadata_list:
+            ruta = m.get("ruta", "")
+            titulo = m.get("titulo_extraido", "Documento sin título")
+            cat = _extraer_categoria(ruta)
+            grupos[cat].add(titulo)
+
+        # Construir Markdown
+        lineas = [
+            "## 🏛️ Acervo Documental del Juez Scharseinegger\n",
+            "Leyes y reglamentos procesados en la memoria semántica (FAISS), organizados por materia.\n",
+            "---",
+        ]
+
+        total = 0
+        for cat_key, cat_label in CATEGORIAS.items():
+            titulos = sorted(grupos[cat_key])
+            if not titulos:
                 continue
-            
-            archivos_encontrados = True
-            ruta_actual = Path(raiz)
-            
-            # Si estamos en una subcarpeta (no en la raíz del headliner), ponemos un subtítulo
-            if ruta_actual != ruta_categoria:
-                nombre_sub = SUB_NOMBRES.get(ruta_actual.name, ruta_actual.name.replace("_", " ").title())
-                lineas.append(f"\n### 📁 {nombre_sub}")
-            
-            # Listar los documentos
-            for doc in docs:
-                lineas.append(f"- {_nombre_legible(Path(doc))}")
+            total += len(titulos)
+            lineas.append(f"\n### {cat_label} ({len(titulos)})\n")
+            for t in titulos:
+                nombre_limpio = t.replace("-", " ").title()
+                lineas.append(f"- ✅ {nombre_limpio}")
 
-        if not archivos_encontrados:
-            lineas.append("_No hay documentos procesados en esta sección._")
+        # Si quedaron documentos sin clasificar
+        otros = sorted(grupos["Otros"])
+        if otros:
+            total += len(otros)
+            lineas.append(f"\n### 📁 Otros ({len(otros)})\n")
+            for t in otros:
+                nombre_limpio = t.replace("-", " ").title()
+                lineas.append(f"- ✅ {nombre_limpio}")
 
-    return "\n".join(lineas)
+        lineas.append(f"\n**Total de leyes indexadas:** {total}")
+        return "\n".join(lineas)
 
-if __name__ == "__main__":
-    print(generar_catalogo())
+    except Exception as e:
+        return f"❌ Error al leer la biblioteca FAISS: {str(e)}"

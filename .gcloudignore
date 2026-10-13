@@ -5,4 +5,10 @@ modelo_e5/
 procesado-mx/
 procesado-unam/
 venv/
-descargar_modelo.py
+descargar_modelo.py.git/
+.gitignore
+.env
+.venv/
+llamada_deepseek.txt
+faiss-lista/
+__pycache__/

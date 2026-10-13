@@ -24,3 +24,6 @@ faiss-cpu
 
 pysqlite3-binary
 python-docx
+# --- Servidor del frontend ---
+fastapi>=0.110
+uvicorn[standard]>=0.27
