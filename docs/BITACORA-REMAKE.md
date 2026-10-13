@@ -440,7 +440,7 @@ spec:
           resources:
             limits:
               cpu: "2"
-              memory: 8Gi                                # F1-14: ~5.3 GiB estimados
+              memory: 4Gi                                # F4-09 (antes 8Gi por F1-14)
           startupProbe:
             httpGet:
               path: /api/estado
@@ -625,3 +625,4 @@ Dominio propio (D5), dos caminos:
 | 2026-10-12 | Se agrega §2-bis con los pendientes abiertos (P1–P12). Inicia Fase 2 (`BITACORA-REMAKE-F2.md`). |
 | 2026-10-13 | **Fase 2 completa** (detalle en `BITACORA-REMAKE-F2.md`): API `cloudresourcemanager`, repo `protocolo01-v2`, cuentas `protocolo01-v2-run`/`-build` con permisos mínimos, versión 2 del secreto. P1 y P2 cerrados; abiertos P13 y P14. Inicia Fase 3 (`BITACORA-REMAKE-F3.md`). |
 | 2026-10-13 | **Fase 3 completa** (detalle en `BITACORA-REMAKE-F3.md`): `requirements.txt` + `constraints.txt` (entorno del venv reproducido exacto), `Dockerfile.pesada`, `Dockerfile`, `cloudbuild-pesada.yaml`, `cloudbuild.yaml`, `startup.sh`, `deploy/service.yaml`, `.gcloudignore`, `.dockerignore`. Decisiones: Gradio fuera, `minScale: 0`, `maxScale: 2` provisional, `E2_HIGHCPU_8` para la pesada. Cerrados P3, P5, P7. Inicia Fase 4 (`BITACORA-REMAKE-F4.md`). |
+| 2026-10-13 | **Fase 4 completa** (detalle en `BITACORA-REMAKE-F4.md`): pesada local en 10.5 min con imports y modelo verificados; reproduce el venv exacto (110/110). Ligera en 4 s, solo con archivos de ejecución. Contenedor arranca en ~32 s; front, API, Cita Precisa (con y sin FAISS) y Razonamiento (streaming) funcionan; falla controladamente sin acervo. Memoria medida ~1.2 GiB (~3.3 GiB estimados en frío) → servicio a **4 GiB**. `constraints.txt` ajustado (95). Pendiente: confirmar paso a Fase 5. |
