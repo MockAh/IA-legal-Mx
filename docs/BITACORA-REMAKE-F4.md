@@ -3,7 +3,7 @@
 Desglose de la **Fase 4** de `BITACORA-REMAKE.md` en mini-tareas de ~15 minutos.
 
 - **Inicio:** 2026-10-13
-- **Estado:** completada (2026-10-13). Paso a Fase 5 pendiente de confirmación.
+- **Estado:** completada (2026-10-13). Fase 5 autorizada.
 - **Objetivo:** construir la imagen pesada y la ligera **en la PC**, arrancarlas con el acervo
   local montado como si fuera el bucket, y confirmar que el contenedor arranca, sirve el front
   y la API, carga el modelo y cabe en memoria. Con esto se decide la memoria final y se pasa a la
@@ -364,7 +364,7 @@ docker rm -f p01v2
 | Memoria del servicio (`deploy/service.yaml`) | **4 GiB** (aprobado por el responsable el 2026-10-13; antes 8 GiB). 2 vCPU sin cambio |
 | Cambios necesarios a archivos de la Fase 3 | `constraints.txt` (+5 −9, F4-04) y `deploy/service.yaml` (memoria). Ninguno obliga a reconstruir las imágenes |
 | Limpieza | Contenedor `p01v2` borrado. Se conservan `protocolo01-v2-pesada:local` y `protocolo01-v2-app:local` hasta terminar la Fase 5 |
-| ¿Pasar a Fase 5? | Pendiente de confirmación del responsable (la Fase 5 tiene costo y crea recursos) |
+| ¿Pasar a Fase 5? | ☑ Sí — confirmado por el responsable el 2026-10-13 |
 
 ---
 
