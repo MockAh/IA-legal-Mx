@@ -1,7 +1,8 @@
 # deploy/service.yaml — Configuración de Cloud Run para protocolo01-app-v2
 # Se aplica UNA vez para crear el servicio (o para cambiar su configuración):
-#   sed "s|IMAGEN_INICIAL|<ruta completa de una imagen protocolo01-v2-app>|" deploy/service.yaml \
-#     | gcloud run services replace - --region=us-central1
+#   sed "s|IMAGEN_INICIAL|<ruta completa de una imagen protocolo01-v2-app>|" deploy/service.yaml > /tmp/service.yaml
+#   gcloud run services replace /tmp/service.yaml --region=us-central1
+#   (para cambiar configuración después, usar la imagen actual del servicio, no IMAGEN_INICIAL)
 # Los despliegues de código (cloudbuild.yaml) solo cambian la imagen; lo demás vive aquí.
 apiVersion: serving.knative.dev/v1
 kind: Service

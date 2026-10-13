@@ -93,9 +93,9 @@ Lista única de pendientes. Se marca aquí cuando se cierran (y en la bitácora 
 | P1 | Generar clave nueva de DeepSeek y agregarla como versión 2 del secreto `DEEPSEEK_API_KEY` | §0 punto 7 | F2-08 | ☑ versión 2 (2026-10-13) |
 | P2 | Revisar los miembros IAM del proyecto (en especial si la cuenta de cómputo por defecto es Editor) | F1-12 | F2-02 | ☑ Sí es Editor → P13 |
 | P3 | D3: instancias mínimas 0 o 1 | §2 | Fase 5 | ☑ **0** (F3-08): sin costo fijo; primera consulta lenta |
-| P4 | D6: límite de uso público (costo de DeepSeek) | §2, §6 | Fase 5 / 6 | ◐ `maxScale: 2` provisional (F3-11); falta decidir si se agrega otro límite |
+| P4 | D6: límite de uso público (costo de DeepSeek) | §2, §6 | Fase 5 / 6 | ☑ F5-13: `maxScale: 2` definitivo + límites externos (P18) |
 | P5 | D4: confirmar Gradio fuera de producción | §2 | Fase 3 | ☑ Fuera (F3-03) |
-| P6 | D5: ¿dominio propio? | §2 | Fase 6 | ☐ |
+| P6 | D5: ¿dominio propio? | §2 | Fase 6 | ☑ **No** (F5-14): se usa la URL `*.run.app`, gratuita |
 | P7 | Crear `modelo_e5/2_Normalize/` vacía en la imagen pesada | F1-07 | Fase 3 (`Dockerfile.pesada`) | ☑ F3-06 |
 | P8 | Cambios a `main.py` / `recursos.py` de §3.9 | §3.9 | **En pausa**: regla de no tocar el backend | ⏸ |
 | P9 | Borrar el servicio `ia-legal-mexicana-web` (y decidir sus imágenes en `ia-legal-repo`) | F1-13 | §5 Limpieza | ☐ |
@@ -103,8 +103,11 @@ Lista única de pendientes. Se marca aquí cuando se cierran (y en la bitácora 
 | P11 | Sacar la clave en texto plano de `llamada_deepseek.txt` | §0 punto 7 | §5 Limpieza | ☐ |
 | P12 | Copias locales de `basic` y `faiss-lista` desactualizadas frente al bucket | F1-06, F1-08 | Informativo (regla: no se baja el acervo al repo) | — |
 | P13 | Quitar `roles/editor` (y el `objectViewer` redundante) a la cuenta de cómputo por defecto `879901246493-compute@…`, cuando `protocolo01-app` e `ia-legal-mexicana-web` ya no la usen | F2-02 | §5 Limpieza | ☐ |
-| P14 | Acotar `roles/run.developer` de `protocolo01-v2-build` del proyecto al servicio `protocolo01-app-v2` (hoy podría desplegar cualquier servicio, incluido `protocolo01-app`) | F2-07 | Fase 5, en cuanto exista el servicio | ☐ |
+| P14 | Acotar `roles/run.developer` de `protocolo01-v2-build` del proyecto al servicio `protocolo01-app-v2` (hoy podría desplegar cualquier servicio, incluido `protocolo01-app`) | F2-07 | Fase 5, en cuanto exista el servicio | ☑ F5-11 (2026-10-13) |
 | P15 | Decidir si se sube la rama `remake/protocolo01-v2` a GitHub (repo privado) | F3-14 | Cuando el responsable lo indique | ☑ Subida el 2026-10-13 (`origin/remake/protocolo01-v2`, con seguimiento) |
+| P16 | Borrar el bucket `gs://mi-proyecto-axiomas` (4.79 MiB: `requirements.txt`, `legislacion-mx/`, `legislacion-unam/`, `scripts/`). Antes: confirmar que nada lo usa y decidir si se respalda su contenido | F5 (decisión del responsable, 2026-10-13) | §5 Limpieza | ☐ |
+| P17 | Cita Precisa no encuentra artículos en FCE: la colección guarda `titulo_documento` con acentos y `normalizar_titulo()` los quita. Muy probablemente preexistente (misma lógica y datos que `protocolo01-app`; no probado contra el servicio viejo). Caminos: reingestar FCE normalizado, o que `logica_a` pruebe ambas formas (cambio al núcleo) | F5-09 | Fuera del rehecho; decisión del responsable | ☐ |
+| P18 | Configurar el límite de gasto en DeepSeek y una alerta de presupuesto en Google Cloud (Facturación → Presupuestos y alertas) | F5-13 | **El responsable**, antes de abrir al público (Fase 6) |☑ resuelto por el responsable (2026-10-13) |
 
 ---
 
@@ -597,6 +600,7 @@ Dominio propio (D5), dos caminos:
 ## 5. Limpieza del esquema anterior (después de validar el nuevo)
 
 - [ ] Borrar servicio viejo `protocolo01-app` (confirmar antes)
+- [ ] **Borrar el bucket `gs://mi-proyecto-axiomas`** (P16; decidido el 2026-10-13). Antes: confirmar que ningún servicio ni script lo usa y decidir si se respalda. Comando: `gcloud storage rm --recursive gs://mi-proyecto-axiomas` (borra contenido y bucket; irreversible salvo el *soft delete* de 7 días)
 - [ ] **Borrar el servicio `ia-legal-mexicana-web`** (decidido por el responsable el 2026-10-12; ver F1-13). Antes de borrar: confirmar que nadie use su URL y revisar si también se limpian sus imágenes en el repo `ia-legal-repo`. Comando: `gcloud run services delete ia-legal-mexicana-web --region=us-central1`
 - [ ] Borrar imágenes `gcr.io/alma-juridica-aipp/protocolo01-*`
 - [ ] Quitar `llamada_deepseek.txt` o dejarlo sin claves (comandos nuevos ya viven aquí)
@@ -627,3 +631,4 @@ Dominio propio (D5), dos caminos:
 | 2026-10-13 | **Fase 3 completa** (detalle en `BITACORA-REMAKE-F3.md`): `requirements.txt` + `constraints.txt` (entorno del venv reproducido exacto), `Dockerfile.pesada`, `Dockerfile`, `cloudbuild-pesada.yaml`, `cloudbuild.yaml`, `startup.sh`, `deploy/service.yaml`, `.gcloudignore`, `.dockerignore`. Decisiones: Gradio fuera, `minScale: 0`, `maxScale: 2` provisional, `E2_HIGHCPU_8` para la pesada. Cerrados P3, P5, P7. Inicia Fase 4 (`BITACORA-REMAKE-F4.md`). |
 | 2026-10-13 | **Fase 4 completa** (detalle en `BITACORA-REMAKE-F4.md`): pesada local en 10.5 min con imports y modelo verificados; reproduce el venv exacto (110/110). Ligera en 4 s, solo con archivos de ejecución. Contenedor arranca en ~32 s; front, API, Cita Precisa (con y sin FAISS) y Razonamiento (streaming) funcionan; falla controladamente sin acervo. Memoria medida ~1.2 GiB (~3.3 GiB estimados en frío) → servicio a **4 GiB**. `constraints.txt` ajustado (95). Pendiente: confirmar paso a Fase 5. |
 | 2026-10-13 | Paso a Fase 5 confirmado por el responsable. Se crea `BITACORA-REMAKE-F5.md` (14 mini-tareas). |
+| 2026-10-13 | **Fase 5 completa** (detalle en `BITACORA-REMAKE-F5.md`): pesada `v1` (5 min 57 s, ~$0.09; 1.73 GiB) y ligera construidas en Cloud Build; servicio `protocolo01-app-v2` creado privado; las 6 bases reales abiertas (11 366 fragmentos), catálogo 45 títulos; General, Trámites SEGOB y Razonamiento ✅, Cita Precisa FCE ❌ (P17, preexistente); memoria pico 22 % de 4 GiB; arranque en frío 38 s + primera consulta 26 s; despliegue normal validado (rev. `00002-7f2`); `run.developer` acotado. Cerrados P4, P6, P14, P18. Inicia Fase 6 (`BITACORA-REMAKE-F6.md`). |
