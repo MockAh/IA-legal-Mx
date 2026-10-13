@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Wall-E Legal 2.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,600;1,6..96,400&family=IBM+Plex+Mono:wght@400;500&family=Spectral:ital,wght@0,300;0,400;0,600;1,400&display=swap">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23C6CDD5'/%3E%3Cg stroke='%2313161B' stroke-width='3' fill='none' stroke-linecap='round'%3E%3Cpath d='M32 17v30'/%3E%3Cpath d='M19 23h26'/%3E%3Cpath d='M19 23l-5 11h10z'/%3E%3Cpath d='M45 23l-5 11h10z'/%3E%3Cpath d='M25 47h14'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="stylesheet" href="/web/app.css">
+</head>
+<body>
+
+<div class="lamina">
+
+  <header class="cabecera">
+    <div class="marca">
+      <svg class="sello" viewBox="0 0 64 64" role="img" aria-label="Sello de la plataforma">
+        <defs>
+          <linearGradient id="g-metal" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#FDFDFE"/><stop offset=".3" stop-color="#C6CDD5"/>
+            <stop offset=".52" stop-color="#8E99A5"/><stop offset=".7" stop-color="#EFF2F5"/>
+            <stop offset="1" stop-color="#B3BCC5"/>
+          </linearGradient>
+        </defs>
+        <circle cx="32" cy="32" r="30" fill="url(#g-metal)"/>
+        <circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" stroke-opacity=".28"/>
+        <circle cx="32" cy="32" r="25" fill="none" stroke="#13161B" stroke-opacity=".35" stroke-width=".8"/>
+        <g stroke="#13161B" stroke-opacity=".78" stroke-width="1.6" fill="none" stroke-linecap="round">
+          <path d="M32 17v30"/><path d="M19 23h26"/>
+          <path d="M19 23l-5 11h10z"/><path d="M45 23l-5 11h10z"/>
+          <path d="M25 47h14"/>
+        </g>
+      </svg>
+      <div class="titulos">
+        <h1>Wall-E Legal 2.0</h1>
+        <p>Acervo normativo mexicano · Recuperación semántica</p>
+      </div>
+    </div>
+    <div class="estado" id="estado-sistema">
+      <span class="pastilla"><span class="punto"></span>Consultando estado…</span>
+    </div>
+  </header>
+
+  <div class="filete"></div>
+
+  <nav class="pestanas" role="tablist" aria-label="Secciones del agente">
+    <button class="pestana" role="tab" id="t-cita" aria-controls="p-cita" aria-selected="true">
+      <b>Cita Precisa</b><span>Recuperación literal</span>
+    </button>
+    <button class="pestana" role="tab" id="t-razon" aria-controls="p-razon" aria-selected="false" tabindex="-1">
+      <b>Razonamiento Jurídico</b><span>Síntesis fundada</span>
+    </button>
+    <button class="pestana" role="tab" id="t-catalogo" aria-controls="p-catalogo" aria-selected="false" tabindex="-1">
+      <b>Catálogo FAISS</b><span>Acervo indexado</span>
+    </button>
+  </nav>
+
+  <!-- ══ CITA PRECISA ═══════════════════════════════════════ -->
+  <section class="panel doble" id="p-cita" role="tabpanel" aria-labelledby="t-cita">
+    <aside class="tarjeta">
+      <p class="rotulo">Modo fijo de esta pestaña</p>
+      <h2>Qué hace Cita Precisa</h2>
+      <p>Devuelve el <strong>texto literal</strong> de un artículo, tal como está registrado en el acervo. No interpreta, no resume y no agrega comentario: localiza la norma exacta y la entrega con su ley, su número de artículo y su archivo de origen.</p>
+      <p>Úsalo cuando ya sabes qué citar y necesitas el texto íntegro para un escrito, un dictamen o una audiencia.</p>
+      <ol class="flujo">
+        <li>El modelo extrae de tu consulta el <code>titulo_documento</code> y el <code>Articulo</code>.</li>
+        <li>FAISS resuelve el nombre coloquial de la ley contra el título exacto del acervo.</li>
+        <li>Chroma filtra por ley, artículo y <code>Transitorio</code>, y regresa el párrafo completo.</li>
+      </ol>
+    </aside>
+
+    <div class="consola">
+      <div class="consola-cabeza">
+        <span class="modo-fijo"><i></i>Modo: Cita Precisa</span>
+        <span class="candado">Fijo en esta pestaña</span>
+      </div>
+      <div class="cuerpo-consola">
+        <fieldset class="grupo-bases">
+          <legend>Base de datos</legend>
+          <div class="chips" data-chips="cita">
+            <button class="chip" type="button" aria-pressed="false" data-base="FCE">
+              <b>FCE</b><span>fce-mx</span>
+            </button>
+            <button class="chip" type="button" aria-pressed="false" data-base="TRAMITES_SEGOB">
+              <b>Trámites SEGOB</b><span>segob-mx</span>
+            </button>
+            <button class="chip" type="button" aria-pressed="true" data-base="GENERAL">
+              <b>General</b><span>basic · transp · 3p</span>
+            </button>
+          </div>
+        </fieldset>
+
+        <div class="campo">
+          <textarea id="q-cita" placeholder="Artículo 16 de la Constitución Política de los Estados Unidos Mexicanos"></textarea>
+          <div class="pie-campo">
+            <div class="sugerencias">
+              <button class="sugerencia" type="button">Artículo 123 de la Ley Federal del Trabajo</button>
+              <button class="sugerencia" type="button">Artículo 14 de la Constitución</button>
+            </div>
+            <button class="enviar" type="button" id="btn-cita">Consultar</button>
+          </div>
+        </div>
+
+        <div class="salida">
+          <div class="salida-cabeza">
+            <h3>Respuesta</h3>
+            <span class="eco" id="eco-cita"></span>
+          </div>
+          <div id="estado-cita"></div>
+          <article class="respuesta literal vacia" id="salida-cita">
+            Escribe la ley y el artículo que necesitas citar.
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ RAZONAMIENTO JURÍDICO ══════════════════════════════ -->
+  <section class="panel doble" id="p-razon" role="tabpanel" aria-labelledby="t-razon" hidden>
+    <aside class="tarjeta">
+      <p class="rotulo">Modo fijo de esta pestaña</p>
+      <h2>Qué hace Razonamiento Jurídico</h2>
+      <p>Recupera los fragmentos normativos pertinentes y redacta una <strong>respuesta argumentada</strong> en tiempo real, citando la fuente de cada afirmación. Es el modo para preguntas abiertas: procedencia, requisitos, plazos, conflictos entre normas.</p>
+      <p>La redacción se apoya solo en lo recuperado del acervo. Si la normativa cargada no alcanza para responder, lo dice en lugar de completar por su cuenta.</p>
+      <ol class="flujo">
+        <li>Búsqueda híbrida: filtro exacto por ley y artículo, más búsqueda semántica.</li>
+        <li>Se arma el contexto con los fragmentos únicos y su metadato de ley.</li>
+        <li>El modelo redacta progresivamente y cierra con las fuentes consultadas.</li>
+      </ol>
+    </aside>
+
+    <div class="consola">
+      <div class="consola-cabeza">
+        <span class="modo-fijo"><i></i>Modo: Razonamiento Jurídico</span>
+        <span class="candado">Respuesta progresiva</span>
+      </div>
+      <div class="cuerpo-consola">
+        <fieldset class="grupo-bases">
+          <legend>Base de datos</legend>
+          <div class="chips" data-chips="razon">
+            <button class="chip" type="button" aria-pressed="false" data-base="FCE">
+              <b>FCE</b><span>fce-mx</span>
+            </button>
+            <button class="chip" type="button" aria-pressed="false" data-base="TRAMITES_SEGOB">
+              <b>Trámites SEGOB</b><span>segob-mx + tramites-mx</span>
+            </button>
+            <button class="chip" type="button" aria-pressed="true" data-base="GENERAL">
+              <b>General</b><span>basic · transp · 3p</span>
+            </button>
+          </div>
+        </fieldset>
+
+        <div class="campo">
+          <textarea id="q-razon" placeholder="¿Qué requisitos debe cumplir un acto de molestia para ser constitucionalmente válido?"></textarea>
+          <div class="pie-campo">
+            <div class="sugerencias">
+              <button class="sugerencia" type="button">¿Cuál es el plazo para responder una solicitud de información?</button>
+              <button class="sugerencia" type="button">Diferencia entre acto de molestia y acto de privación</button>
+            </div>
+            <button class="enviar" type="button" id="btn-razon">Analizar</button>
+          </div>
+        </div>
+
+        <div class="salida">
+          <div class="salida-cabeza">
+            <h3>Respuesta</h3>
+            <span class="eco" id="eco-razon"></span>
+          </div>
+          <div id="estado-razon"></div>
+          <article class="respuesta vacia" id="salida-razon">
+            Plantea tu pregunta en lenguaje natural.
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ CATÁLOGO FAISS ═════════════════════════════════════ -->
+  <section class="panel" id="p-catalogo" role="tabpanel" aria-labelledby="t-catalogo" hidden>
+    <div class="tarjeta" style="margin-bottom:22px">
+      <p class="rotulo">Memoria semántica</p>
+      <h2>Qué contiene el Catálogo FAISS</h2>
+      <p>Es el inventario completo de la jurisdicción cargada en el índice de títulos: toda ley, reglamento o estatuto que el agente puede citar. Se construye leyendo <code>metadata_titulos_leyes.pkl</code> y agrupando por la carpeta de origen dentro de <code>legislacion-mx/</code>.</p>
+      <p>Si una norma no aparece aquí, el agente no la tiene y lo dirá en lugar de aproximarla. Es la forma rápida de verificar cobertura antes de confiar una consulta al sistema.</p>
+    </div>
+
+    <div class="tiras">
+      <div class="tira"><b id="n-total">—</b><span>Leyes indexadas</span></div>
+      <div class="tira"><b id="n-materias">—</b><span>Materias</span></div>
+      <div class="tira"><b id="n-acervos">—</b><span>Acervos en línea</span></div>
+      <div class="tira"><b>1024</b><span>Dimensión del vector</span></div>
+    </div>
+
+    <div class="filtros">
+      <div class="buscador">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <circle cx="7" cy="7" r="5"/><path d="M11 11l4 4" stroke-linecap="round"/>
+        </svg>
+        <label for="buscar-ley" hidden>Buscar ley</label>
+        <input id="buscar-ley" type="search" placeholder="Buscar por nombre de ley, reglamento o código…" autocomplete="off">
+      </div>
+      <div class="materias" id="materias"></div>
+    </div>
+
+    <div id="lista-acervos"></div>
+    <p class="vacio" id="sin-resultados" hidden>Ninguna norma del índice coincide con esa búsqueda.</p>
+  </section>
+
+  <p class="nota-pie">
+    Las respuestas se construyen únicamente con la normativa cargada en el acervo. Verifica siempre
+    contra la publicación oficial en el <b>Diario Oficial de la Federación</b> antes de usarlas en un
+    escrito con efectos jurídicos.
+  </p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="/web/app.js"></script>
+</body>
+</html>
