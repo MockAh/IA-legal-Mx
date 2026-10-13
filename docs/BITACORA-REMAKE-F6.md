@@ -3,7 +3,7 @@
 Desglose de la **Fase 6** de `BITACORA-REMAKE.md` en mini-tareas de ~15 minutos.
 
 - **Inicio:** 2026-10-13
-- **Estado:** en curso
+- **Estado:** en curso — pausa el 2026-10-13 tras F6-04; se retoma en **F6-05**
 - **Objetivo:** que `protocolo01-app-v2` se pueda usar desde cualquier navegador en
   `https://protocolo01-app-v2-879901246493.us-central1.run.app`, verificarlo desde fuera,
   vigilar las primeras horas y dejar documentado cómo operar el sistema nuevo.
@@ -35,10 +35,10 @@ Desglose de la **Fase 6** de `BITACORA-REMAKE.md` en mini-tareas de ~15 minutos.
 
 | # | Mini-tarea | Quién | Efecto | Estado |
 |---|---|---|---|---|
-| F6-01 | Pre-vuelo público (solo lectura) | Claude | — | ☐ |
-| F6-02 | Hacer público el servicio (`allUsers` → invocador) | Claude, **con tu autorización** | **Cualquiera puede usarlo** | ☐ |
-| F6-03 | Verificar desde fuera, sin credenciales | Claude | — | ☐ |
-| F6-04 | Probar desde otro dispositivo y red (celular con datos) | **Tú** | 1–2 consultas | ☐ |
+| F6-01 | Pre-vuelo público (solo lectura) | Claude | — | ☑ |
+| F6-02 | Hacer público el servicio (`allUsers` → invocador) | Claude, **con tu autorización** | **Cualquiera puede usarlo** | ☑ |
+| F6-03 | Verificar desde fuera, sin credenciales | Claude | — | ☑ |
+| F6-04 | Probar desde otro dispositivo y red (celular con datos) | **Tú** | 1–2 consultas | ☑ |
 | F6-05 | Revisar los logs de la primera hora pública | Claude | — | ☐ |
 | F6-06 | Decidir sobre `/api/docs` (Swagger público) | **Tú** | — | ☐ |
 | F6-07 | Actualizar `CLAUDE.md` y `readme.md` con la arquitectura nueva | Claude propone, tú apruebas | Cambia documentación | ☐ |
@@ -62,9 +62,9 @@ curl -s -o /dev/null -w "%{http_code}\n" https://protocolo01-app-v2-879901246493
 
 | Dato | Valor |
 |---|---|
-| Revisión y tráfico | |
-| Política actual | |
-| Respuesta sin token | |
+| Revisión y tráfico | ✅ `00002-7f2`, 100 %, lista · 2 vCPU · 4 GiB |
+| Política actual | Solo `protocolo01-v2-build` como `run.developer`; **sin `allUsers`** |
+| Respuesta sin token | 403 (privado) · 0 errores en los logs |
 
 ---
 
@@ -87,8 +87,8 @@ gcloud run services remove-iam-policy-binding protocolo01-app-v2 --region=us-cen
 
 | Dato | Valor |
 |---|---|
-| Aplicado | |
-| Autorización | |
+| Aplicado | ✅ 2026-10-13: `allUsers` → `roles/run.invoker`. Sin token: **200** |
+| Autorización | Responsable, explícita ("¡Hazlo público! ¡Ya!") |
 
 ---
 
@@ -105,11 +105,12 @@ Sin consultas a DeepSeek (las hace F6-04).
 
 | Prueba | Resultado |
 |---|---|
-| Front (`/`, `app.js`, `app.css`) | |
-| `/api/estado` (6 bases) | |
-| `/api/catalogo` | |
-| `Zone.Identifier` (404) | |
-| HTTPS | |
+| Front (`/`, `app.js`, `app.css`) | ✅ 200 / 200 / 200 (0.2–0.7 s) · título *"Asistente Legal Mexicano"* |
+| `/api/estado` (6 bases) | ✅ basic 3688 · segob 3169 · transp 413 · 3p 935 · fce 3080 · tramites 81; las 3 bases del front completas |
+| `/api/catalogo` | ✅ 45 títulos |
+| `Zone.Identifier` (404) | ✅ 404 |
+| HTTPS | ✅ HTTP/2 con `Google Frontend`; `http://` redirige con 302 a `https://`; HTTP/3 anunciado (`alt-svc`) |
+| `HEAD /` | 405: `main.py` solo acepta `GET` en `/`. Ver §Hallazgos |
 
 ---
 
@@ -124,10 +125,10 @@ Sin consultas a DeepSeek (las hace F6-04).
 
 | Prueba | Resultado |
 |---|---|
-| Carga en celular | |
-| Tres pestañas | |
-| Consultas | |
-| Problemas de diseño | |
+| Carga en celular | ✅ (responsable, smartphone con datos móviles) |
+| Tres pestañas | ✅ |
+| Consultas | ✅ "todo en orden" |
+| Problemas de diseño | Ninguno reportado |
 
 ---
 
@@ -230,6 +231,7 @@ gh pr create --base master --head remake/protocolo01-v2 --title "Rehecho protoco
 
 | Tarea | Hallazgo | Impacto | Acción propuesta |
 |---|---|---|---|
+| F6-03 | `HEAD /` responde 405 (la ruta `/` de `main.py` solo declara `GET`). | Algunos monitores de disponibilidad y vistas previas de enlaces usan `HEAD`; los navegadores no. | Informativo. Si se usa un monitor, configurarlo con `GET`. Cambiarlo requiere tocar `main.py`. |
 | (previo) | El proyecto no pertenece a ninguna organización. | `allUsers` no está bloqueado por política. | Ninguna. |
 
 ---
@@ -239,3 +241,8 @@ gh pr create --base master --head remake/protocolo01-v2 --title "Rehecho protoco
 | Fecha | Entrada |
 |---|---|
 | 2026-10-13 | Se crea la bitácora de Fase 6 con 11 mini-tareas. Verificado: servicio privado en `00002-7f2`, proyecto sin organización. |
+| 2026-10-13 | F6-01 hecha (Claude, solo lectura): servicio sano y privado; listo para F6-02. |
+| 2026-10-13 | F6-02 hecha (Claude, autorizado): **`protocolo01-app-v2` es público** en `https://protocolo01-app-v2-879901246493.us-central1.run.app`. |
+| 2026-10-13 | F6-03 hecha (Claude): acceso público verificado sin credenciales; 6 bases, catálogo 45, HTTPS con redirección. |
+| 2026-10-13 | F6-04 hecha (responsable): front y consultas en orden desde smartphone con datos móviles. |
+| 2026-10-13 | Pausa del día. Siguiente: F6-05. |
