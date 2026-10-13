@@ -1,41 +1,56 @@
-# ⚖️ Sistema RAG Legal - Juez Scharseinegger 2.0
+# ⚖️ Asistente Legal Mexicano
 
-Sistema de recuperación y generación aumentada (RAG) especializado en legislación mexicana (UNAM, SEGOB, FCE) y trámites gubernamentales.
+Agente RAG especializado en legislación mexicana (legislación básica, SEGOB, transparencia,
+tres poderes, FCE) y trámites de gob.mx. Recupera fragmentos normativos de ChromaDB y redacta
+con DeepSeek.
 
-## 🚀 Instalación y Configuración del Modelo
+**En producción:** https://protocolo01-app-v2-879901246493.us-central1.run.app
+(Cloud Run, `us-central1`). La primera visita tras un rato sin uso tarda ~1 min en cargar.
 
-Este proyecto utiliza un modelo de embeddings local para garantizar privacidad y velocidad. **No se incluye el modelo binario en el repositorio** por su peso, pero se provee el script para autogenerarlo.
+## Pestañas
 
-### 1. Clonar y preparar entorno
+1. **Cita Precisa** — recuperación literal de artículos.
+2. **Razonamiento Jurídico** — respuesta en streaming con fundamentos numerados.
+3. **Catálogo FAISS** — inventario del acervo, por materia.
+
+Bases a elegir: **General** (básica + transparencia + tres poderes), **FCE** y **Trámites SEGOB**.
+
+## Correr en local
+
 ```bash
-git clone <URL_DE_TU_REPO>
-cd ia-legal-rag
-python -m venv venv
-source venv/bin/activate  # O en Windows: venv\Scripts\activate
-pip install -r requirements-local.txt
+python3 -m venv .venv && source .venv/bin/activate
 
-### 2. ⚠️ PASO CRÍTICO: Descargar el Modelo Local
-El sistema requiere el modelo intfloat/multilingual-e5-large-instruct. Ejecuta este script para descargarlo y guardarlo automáticamente en la carpeta ./modelo_e5:
+# Producción (FastAPI + front): mismas versiones que la imagen
+pip install torch==2.9.1 --index-url https://download.pytorch.org/whl/cpu
+pip install -r requirements.txt -c constraints.txt
 
-Bash
+# Modelo de embeddings (una vez, ~2 GB): intfloat/multilingual-e5-large-instruct → ./modelo_e5
+python3 descargar_modelo.py
 
-python descargar_modelo.py
-Este script descargará los tensores necesarios para que el sistema funcione offline.
+# Clave de DeepSeek
+echo "DEEPSEEK_API_KEY=..." > .env
 
-### 3. Configurar Variables de Entorno
-Crea un archivo .env basado en tus proveedores de LLM (DeepSeek, OpenAI, etc.):
+python3 -u main.py        # http://localhost:8080
+```
 
-DEEPSEEK_API_KEY=tu_clave_aqui
+El acervo (`procesado-mx/`, `faiss-lista/`) **no está en el repo**: vive en el bucket
+`gs://chromadb-alma-juridica-aipp`. Sin él, la app arranca pero `/api/estado` marca las bases
+como no disponibles.
 
-### 4. Indexación de Documentos (Base de Conocimiento)
-Para procesar nuevos documentos (PDF/DOCX) y generar la base de datos vectorial (chroma_db), ejecuta los indexadores según el ámbito:
+Para la interfaz Gradio de legado (`python3 -u app.py`) y los scripts de ingesta
+(`script_embeddings_*.py`, `init_faiss.py`): `pip install -r requirements_local.txt`.
 
-SEGOB/Trámites: python script_embeddings_eva_SEGOB.py
+## Desplegar
 
-Legislación General: python script_embeddings_eva_5_5.py
+Lo ejecuta el responsable del proyecto. Cambio de código o del front:
 
-### 5. Ejecutar la Interfaz
-Bash
+```bash
+gcloud builds submit --config cloudbuild.yaml
+```
 
-python app.py
-El sistema detectará si estás en entorno local o nube y aplicará los parches de SQLite necesarios.
+Dependencias, modelo, acervo, configuración, revertir o cerrar el servicio: `docs/OPERACION.md`.
+
+## Más información
+
+- `CLAUDE.md` — arquitectura, mapa del repo y convenciones.
+- `docs/BITACORA-REMAKE.md` — historia del despliegue y pendientes abiertos.

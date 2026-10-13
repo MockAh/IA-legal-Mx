@@ -4,7 +4,9 @@ Bitácora del rehecho de la arquitectura de despliegue: nuevo entorno en Google 
 imagen pesada + imagen ligera, y la app pública en internet.
 
 - **Inicio:** 2026-10-12
-- **Estado:** Fase 0 (planeación). Nada de lo propuesto aquí está aplicado todavía.
+- **Estado:** Fases 1–5 completas; **Fase 6 en curso** (servicio público desde el 2026-10-13).
+  El detalle vive en `BITACORA-REMAKE-F<n>.md`; las secciones §1 y §3 de este archivo son el
+  plan original y se conservan como referencia.
 - **Regla:** el bucket se conserva íntegro: nada de este plan borra ni sobrescribe en él, y el
   acervo no se descarga al repo para probar.
 - **Regla:** cada fase se ejecuta y verifica antes de pasar a la siguiente. Los comandos
@@ -77,10 +79,10 @@ imagen pesada + imagen ligera, y la app pública en internet.
 |---|---|---|
 | D1 | ¿Proyecto nuevo o el mismo `alma-juridica-aipp`? | **Decidido (2026-10-12): `alma-juridica-aipp`.** El servicio nuevo `protocolo01-app-v2` convive con `protocolo01-app`. |
 | D2 | Región | **Decidido (F1): `us-central1`**, la misma del bucket y del servicio actual. |
-| D3 | ¿Instancias mínimas 0 o 1? | **1** si la app debe responder rápido siempre (evita arranque en frío de ~1 min por cargar el modelo). 0 si se prioriza costo. |
+| D3 | ¿Instancias mínimas 0 o 1? | **Decidido (F3-08): 0** (sin costo fijo; primera consulta lenta). Se reevalúa en F6-05 con el uso real, que es intermitente. |
 | D4 | ¿Gradio en `/legacy` en producción? | **Decidido (F3-03): No.** |
 | D5 | ¿Dominio propio? | Opcional; Fase 6. |
-| D6 | ¿Límite de uso público? | Sí, algo mínimo: cada consulta paga DeepSeek. Ver §7 (riesgos). |
+| D6 | ¿Límite de uso público? | **Decidido (F5-13): `maxScale: 2`** + límite de gasto en DeepSeek y alerta de presupuesto (P4, P18). Ver §6 (riesgos). |
 
 ---
 
@@ -98,8 +100,8 @@ Lista única de pendientes. Se marca aquí cuando se cierran (y en la bitácora 
 | P6 | D5: ¿dominio propio? | §2 | Fase 6 | ☑ **No** (F5-14): se usa la URL `*.run.app`, gratuita |
 | P7 | Crear `modelo_e5/2_Normalize/` vacía en la imagen pesada | F1-07 | Fase 3 (`Dockerfile.pesada`) | ☑ F3-06 |
 | P8 | Cambios a `main.py` / `recursos.py` de §3.9 | §3.9 | **En pausa**: regla de no tocar el backend | ⏸ |
-| P9 | Borrar el servicio `ia-legal-mexicana-web` (y decidir sus imágenes en `ia-legal-repo`) | F1-13 | §5 Limpieza | ☐ |
-| P10 | Borrar la clave vieja: revocarla en DeepSeek y deshabilitar la versión 1 del secreto, **después** de validar `protocolo01-app-v2` (el servicio viejo la sigue usando hasta entonces) | §0 punto 7 | §5 Limpieza | ☐ |
+| P9 | Borrar el servicio `ia-legal-mexicana-web` (y decidir sus imágenes en `ia-legal-repo`) | F1-13 | §5 Limpieza | ☑ servicio, 2 jobs e `ia-legal-repo` borrados (2026-10-13, F6-09 A2/A3-bis/A4) |
+| P10 | Borrar la clave vieja: revocarla en DeepSeek y deshabilitar la versión 1 del secreto, **después** de validar `protocolo01-app-v2` (el servicio viejo la sigue usando hasta entonces) | §0 punto 7 | §5 Limpieza | ◐ clave revocada (responsable) y v1 deshabilitada (2026-10-13, F6-09 A1/A3); falta destruir v1 (B5) |
 | P11 | Sacar la clave en texto plano de `llamada_deepseek.txt` | §0 punto 7 | §5 Limpieza | ☐ |
 | P12 | Copias locales de `basic` y `faiss-lista` desactualizadas frente al bucket | F1-06, F1-08 | Informativo (regla: no se baja el acervo al repo) | — |
 | P13 | Quitar `roles/editor` (y el `objectViewer` redundante) a la cuenta de cómputo por defecto `879901246493-compute@…`, cuando `protocolo01-app` e `ia-legal-mexicana-web` ya no la usen | F2-02 | §5 Limpieza | ☐ |
@@ -108,10 +110,16 @@ Lista única de pendientes. Se marca aquí cuando se cierran (y en la bitácora 
 | P16 | Borrar el bucket `gs://mi-proyecto-axiomas` (4.79 MiB: `requirements.txt`, `legislacion-mx/`, `legislacion-unam/`, `scripts/`). Antes: confirmar que nada lo usa y decidir si se respalda su contenido | F5 (decisión del responsable, 2026-10-13) | §5 Limpieza | ☐ |
 | P17 | Cita Precisa no encuentra artículos en FCE: la colección guarda `titulo_documento` con acentos y `normalizar_titulo()` los quita. Muy probablemente preexistente (misma lógica y datos que `protocolo01-app`; no probado contra el servicio viejo). Caminos: reingestar FCE normalizado, o que `logica_a` pruebe ambas formas (cambio al núcleo) | F5-09 | Fuera del rehecho; decisión del responsable | ☐ |
 | P18 | Configurar el límite de gasto en DeepSeek y una alerta de presupuesto en Google Cloud (Facturación → Presupuestos y alertas) | F5-13 | **El responsable**, antes de abrir al público (Fase 6) |☑ resuelto por el responsable (2026-10-13) |
+| P19 | Límite de consultas por IP (no existe; la longitud de `query` sí está acotada a 4000 caracteres en `main.py:64`). Corregido el 2026-10-13: antes decía, por error, que faltaba el límite de longitud | Revisión de bitácoras (2026-10-13) | Junto con P8: requiere tocar `main.py` (o Cloud Armor) | ⏸ |
+| P20 | Quitar la documentación pública de la API: `docs_url=None, openapi_url=None` en `main.py:34` (hoy `/api/docs` y `/openapi.json` responden 200) | F6-06 | En el próximo cambio a `main.py` (junto con P8/P19) | ⏸ |
+| P21 | Liberar ~21 GB en la PC: borrar las imágenes y la caché de construcción locales de Docker Desktop (Fase 4; las de producción viven en Artifact Registry) y **compactar** `docker_data.vhdx` (no se encoge solo). Medido el 2026-10-13: 21.1 GB | Pregunta del responsable (2026-10-13) | Al terminar la Fase 6, con autorización | ☐ |
 
 ---
 
 ## 3. Fases
+
+> Plan original. Las casillas de esta sección no se actualizan: el avance real y sus datos
+> están en `BITACORA-REMAKE-F1.md` … `BITACORA-REMAKE-F6.md` y en §7 (Registro).
 
 ### Fase 1 — Inventario del bucket (solo lectura)
 
@@ -612,10 +620,10 @@ Dominio propio (D5), dos caminos:
 
 ## 6. Riesgos abiertos
 
-1. **Costo de DeepSeek en un endpoint público.** Cualquiera puede disparar consultas. Mitigaciones: `maxScale` + `containerConcurrency` (ya en `service.yaml`), límite de longitud de `query` en `main.py`, límite de gasto en la cuenta de DeepSeek, y Cloud Armor si se usa balanceador.
+1. **Costo de DeepSeek en un endpoint público.** Cualquiera puede disparar consultas. Mitigaciones: `maxScale` + `containerConcurrency` (ya en `service.yaml`), límite de longitud de `query` (4000 caracteres, ya en `main.py`), límite de consultas por IP (**no existe**, P19), límite de gasto en la cuenta de DeepSeek, y Cloud Armor si se usa balanceador.
 2. **Compatibilidad de Chroma.** Si los datos del bucket se generaron con una versión distinta a `chromadb==1.4.0`, puede no abrirlos. F1-10 lo revisa leyendo solo los `chroma.sqlite3` en una carpeta temporal; la prueba completa ocurre en la nube (Fase 5, `/api/estado`).
-3. **RAM.** 8 GiB es una estimación; se confirma con `docker stats` (Fase 4) y con las métricas de Cloud Run.
-4. **Arranque en frío** con `minScale: 0`: copiar el acervo + cargar el modelo ≈ 1 min.
+3. ~~**RAM.** 8 GiB es una estimación~~ Resuelto: servicio a 4 GiB (F4-09); pico medido en la nube 22 % (F5).
+4. **Arranque en frío** con `minScale: 0`: medido 38 s de arranque + 26 s de la primera consulta (F5). Con uso intermitente, casi cada visita lo sufre; se vigila en F6-05.
 5. **Volumen GCS** requiere entorno gen2 (ya declarado).
 
 ---
@@ -633,3 +641,7 @@ Dominio propio (D5), dos caminos:
 | 2026-10-13 | Paso a Fase 5 confirmado por el responsable. Se crea `BITACORA-REMAKE-F5.md` (14 mini-tareas). |
 | 2026-10-13 | **Fase 5 completa** (detalle en `BITACORA-REMAKE-F5.md`): pesada `v1` (5 min 57 s, ~$0.09; 1.73 GiB) y ligera construidas en Cloud Build; servicio `protocolo01-app-v2` creado privado; las 6 bases reales abiertas (11 366 fragmentos), catálogo 45 títulos; General, Trámites SEGOB y Razonamiento ✅, Cita Precisa FCE ❌ (P17, preexistente); memoria pico 22 % de 4 GiB; arranque en frío 38 s + primera consulta 26 s; despliegue normal validado (rev. `00002-7f2`); `run.developer` acotado. Cerrados P4, P6, P14, P18. Inicia Fase 6 (`BITACORA-REMAKE-F6.md`). |
 | 2026-10-13 | **Fase 6 en curso** (`BITACORA-REMAKE-F6.md`): F6-01 a F6-04 hechas. **`protocolo01-app-v2` es público** en `https://protocolo01-app-v2-879901246493.us-central1.run.app` y probado desde smartphone. Pausa del día; se retoma en F6-05 (logs de la primera hora pública). |
+| 2026-10-13 | Revisión de bitácoras: estado, D3, D6, riesgos 1/3/4 al día; nota en §3 (plan original); nuevo P19 (límite de `query`). F6-05 redefinida como ventana acumulada desde la apertura (el uso real es intermitente). |
+| 2026-10-13 | P19 corregido: el límite de longitud ya existía (4000); el hueco real es el límite por IP. Nuevo P20 (quitar `/api/docs` y `/openapi.json`, decisión F6-06). |
+| 2026-10-13 | F6-07: `CLAUDE.md` actualizado a la arquitectura aplicada (aprobado por el responsable). Nuevo P21 (liberar ~21 GB de Docker Desktop al terminar la Fase 6). |
+| 2026-10-13 | F6-09 etapa A completa: claves viejas revocadas (responsable), `ia-legal-mexicana-web` y 2 Cloud Run Jobs borrados, versión 1 del secreto deshabilitada, `ia-legal-repo` borrado (−51.7 GB). P9 cerrado. |
