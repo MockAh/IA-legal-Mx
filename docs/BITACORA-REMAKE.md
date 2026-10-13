@@ -104,7 +104,7 @@ Lista única de pendientes. Se marca aquí cuando se cierran (y en la bitácora 
 | P12 | Copias locales de `basic` y `faiss-lista` desactualizadas frente al bucket | F1-06, F1-08 | Informativo (regla: no se baja el acervo al repo) | — |
 | P13 | Quitar `roles/editor` (y el `objectViewer` redundante) a la cuenta de cómputo por defecto `879901246493-compute@…`, cuando `protocolo01-app` e `ia-legal-mexicana-web` ya no la usen | F2-02 | §5 Limpieza | ☐ |
 | P14 | Acotar `roles/run.developer` de `protocolo01-v2-build` del proyecto al servicio `protocolo01-app-v2` (hoy podría desplegar cualquier servicio, incluido `protocolo01-app`) | F2-07 | Fase 5, en cuanto exista el servicio | ☐ |
-| P15 | Decidir si se sube la rama `remake/protocolo01-v2` a GitHub (repo privado) | F3-14 | Cuando el responsable lo indique | ☐ |
+| P15 | Decidir si se sube la rama `remake/protocolo01-v2` a GitHub (repo privado) | F3-14 | Cuando el responsable lo indique | ☑ Subida el 2026-10-13 (`origin/remake/protocolo01-v2`, con seguimiento) |
 
 ---
 
