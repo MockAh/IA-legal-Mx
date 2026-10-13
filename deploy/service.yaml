@@ -1,0 +1,58 @@
+# deploy/service.yaml — Configuración de Cloud Run para protocolo01-app-v2
+# Se aplica UNA vez para crear el servicio (o para cambiar su configuración):
+#   sed "s|IMAGEN_INICIAL|<ruta completa de una imagen protocolo01-v2-app>|" deploy/service.yaml \
+#     | gcloud run services replace - --region=us-central1
+# Los despliegues de código (cloudbuild.yaml) solo cambian la imagen; lo demás vive aquí.
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: protocolo01-app-v2
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/execution-environment: gen2   # requerido por el volumen del bucket
+        run.googleapis.com/startup-cpu-boost: "true"     # arranque más rápido
+        autoscaling.knative.dev/minScale: "0"            # D3: se apaga del todo, sin costo fijo
+        autoscaling.knative.dev/maxScale: "2"            # D6 provisional: tope de costo
+    spec:
+      serviceAccountName: protocolo01-v2-run@alma-juridica-aipp.iam.gserviceaccount.com
+      containerConcurrency: 10                           # F1-14
+      timeoutSeconds: 600                                # el streaming de Razonamiento puede tardar
+      containers:
+        - image: IMAGEN_INICIAL
+          ports:
+            - name: http1
+              containerPort: 8080
+          env:
+            - name: ACERVO_DIR
+              value: /mnt/acervo
+            - name: DEEPSEEK_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: DEEPSEEK_API_KEY
+                  key: latest
+          resources:
+            limits:
+              cpu: "2"
+              memory: 8Gi                                # F1-14: ~5.3 GiB estimados
+          startupProbe:
+            httpGet:
+              path: /api/estado
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 8
+            failureThreshold: 30                         # hasta ~5 min para arrancar
+          volumeMounts:
+            - name: acervo
+              mountPath: /mnt/acervo
+      volumes:
+        - name: acervo
+          csi:
+            driver: gcsfuse.run.googleapis.com
+            readOnly: true                               # el bucket no se puede modificar
+            volumeAttributes:
+              bucketName: chromadb-alma-juridica-aipp

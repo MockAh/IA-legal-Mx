@@ -1,44 +1,63 @@
+# cloudbuild.yaml — Imagen ligera + despliegue de protocolo01-app-v2
+# Uso normal (cada cambio de código o del front):
+#   gcloud builds submit --config cloudbuild.yaml
+# Primera vez (el servicio aún no existe): construir sin desplegar
+#   gcloud builds submit --config cloudbuild.yaml --substitutions=_DESPLEGAR=no
+#   y crear el servicio con deploy/service.yaml usando esa imagen.
+# Costo: máquina por defecto (e2-standard-2), dentro de los minutos gratis de Cloud Build.
+substitutions:
+  _REGION: us-central1
+  _REPO: protocolo01-v2
+  _SERVICIO: protocolo01-app-v2
+  _VERSION_PESADA: v1
+  _DESPLEGAR: si
+
+serviceAccount: projects/$PROJECT_ID/serviceAccounts/protocolo01-v2-build@$PROJECT_ID.iam.gserviceaccount.com
+
 steps:
-  # PASO 1: Intentar descargar la imagen base previa (Cache)
-  - name: 'gcr.io/cloud-builders/docker'
-    entrypoint: 'bash'
+  # 1. Solo se despliega sobre un servicio ya creado con deploy/service.yaml
+  - id: verificar-servicio
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
     args:
-      - '-c'
+      - -c
       - |
-        docker pull gcr.io/$PROJECT_ID/protocolo01-base:latest || exit 0
+        if [ "${_DESPLEGAR}" != "si" ]; then echo "ℹ️  Sin despliegue (_DESPLEGAR=${_DESPLEGAR})"; exit 0; fi
+        if ! gcloud run services describe ${_SERVICIO} --region=${_REGION} >/dev/null 2>&1; then
+          echo "❌ ${_SERVICIO} no existe. Créalo primero con deploy/service.yaml."; exit 1
+        fi
+        echo "✅ ${_SERVICIO} existe"
 
-  # PASO 2: Construir la imagen BASE (Rápido si no hay cambios)
-  - name: 'gcr.io/cloud-builders/docker'
-    args: [
-      'build',
-      '-t', 'gcr.io/$PROJECT_ID/protocolo01-base:latest',
-      '--cache-from', 'gcr.io/$PROJECT_ID/protocolo01-base:latest',
-      '-f', 'Dockerfile.base', '.'
-    ]
+  # 2. Construir la ligera sobre la pesada indicada
+  - id: construir-ligera
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg
+      - IMAGEN_PESADA=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/protocolo01-v2-pesada:${_VERSION_PESADA}
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/protocolo01-v2-app:$BUILD_ID
+      - .
 
-  # PASO 3: Construir la imagen de la APP (Usando BUILD_ID para evitar errores)
-  - name: 'gcr.io/cloud-builders/docker'
-    args: [
-      'build',
-      '-t', 'gcr.io/$PROJECT_ID/protocolo01-app:$BUILD_ID',
-      '-t', 'gcr.io/$PROJECT_ID/protocolo01-app:latest',
-      '.'
-    ]
+  # 3. Subirla antes de desplegar (images: solo sube al final del build)
+  - id: subir-ligera
+    name: gcr.io/cloud-builders/docker
+    args: ['push', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/protocolo01-v2-app:$BUILD_ID']
 
-  # PASO 4: Subir las imágenes (Aquí estaba el error antes)
-  - name: 'gcr.io/cloud-builders/docker'
-    args: [
-      'push', 
-      'gcr.io/$PROJECT_ID/protocolo01-app:$BUILD_ID'
-    ]
-
-# Opcional: También subimos la etiqueta 'latest' para facilitar despliegues
-  - name: 'gcr.io/cloud-builders/docker'
-    args: [
-      'push', 
-      'gcr.io/$PROJECT_ID/protocolo01-app:latest'
-    ]
+  # 4. Cambiar SOLO la imagen; memoria, volumen, secreto y probes vienen de deploy/service.yaml
+  - id: desplegar
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        if [ "${_DESPLEGAR}" != "si" ]; then echo "ℹ️  Imagen lista, sin desplegar: protocolo01-v2-app:$BUILD_ID"; exit 0; fi
+        gcloud run deploy ${_SERVICIO} --region=${_REGION} \
+          --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/protocolo01-v2-app:$BUILD_ID
 
 images:
-  - 'gcr.io/$PROJECT_ID/protocolo01-base:latest'
-  - 'gcr.io/$PROJECT_ID/protocolo01-app:latest'
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/protocolo01-v2-app:$BUILD_ID
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+timeout: 1800s

@@ -1,14 +1,23 @@
-.git
-.gcloudignore
-# IGNORAR CARPETAS PESADAS LOCALES
+# .gcloudignore — Lo que NO se sube a Cloud Build
+# Datos y modelo: viven en el bucket (el modelo lo baja cloudbuild-pesada.yaml)
 modelo_e5/
 procesado-mx/
 procesado-unam/
-venv/
-descargar_modelo.py.git/
-.gitignore
-.env
-.venv/
-llamada_deepseek.txt
 faiss-lista/
+Axiomas/
+*.csv
+
+# Entornos, claves y basura
+.env
+llamada_deepseek.txt
+venv/
+.venv/
 __pycache__/
+*.pyc
+*:Zone.Identifier
+
+# Repo y documentación
+.git/
+.gitignore
+.gcloudignore
+docs/

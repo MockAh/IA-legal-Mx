@@ -78,7 +78,7 @@ imagen pesada + imagen ligera, y la app pública en internet.
 | D1 | ¿Proyecto nuevo o el mismo `alma-juridica-aipp`? | **Decidido (2026-10-12): `alma-juridica-aipp`.** El servicio nuevo `protocolo01-app-v2` convive con `protocolo01-app`. |
 | D2 | Región | **Decidido (F1): `us-central1`**, la misma del bucket y del servicio actual. |
 | D3 | ¿Instancias mínimas 0 o 1? | **1** si la app debe responder rápido siempre (evita arranque en frío de ~1 min por cargar el modelo). 0 si se prioriza costo. |
-| D4 | ¿Gradio en `/legacy` en producción? | No. |
+| D4 | ¿Gradio en `/legacy` en producción? | **Decidido (F3-03): No.** |
 | D5 | ¿Dominio propio? | Opcional; Fase 6. |
 | D6 | ¿Límite de uso público? | Sí, algo mínimo: cada consulta paga DeepSeek. Ver §7 (riesgos). |
 
@@ -92,11 +92,11 @@ Lista única de pendientes. Se marca aquí cuando se cierran (y en la bitácora 
 |---|---|---|---|---|
 | P1 | Generar clave nueva de DeepSeek y agregarla como versión 2 del secreto `DEEPSEEK_API_KEY` | §0 punto 7 | F2-08 | ☑ versión 2 (2026-10-13) |
 | P2 | Revisar los miembros IAM del proyecto (en especial si la cuenta de cómputo por defecto es Editor) | F1-12 | F2-02 | ☑ Sí es Editor → P13 |
-| P3 | D3: instancias mínimas 0 o 1 | §2 | Fase 5 | ☐ |
-| P4 | D6: límite de uso público (costo de DeepSeek) | §2, §6 | Fase 5 / 6 | ☐ |
-| P5 | D4: confirmar Gradio fuera de producción | §2 | Fase 3 | ☐ |
+| P3 | D3: instancias mínimas 0 o 1 | §2 | Fase 5 | ☑ **0** (F3-08): sin costo fijo; primera consulta lenta |
+| P4 | D6: límite de uso público (costo de DeepSeek) | §2, §6 | Fase 5 / 6 | ◐ `maxScale: 2` provisional (F3-11); falta decidir si se agrega otro límite |
+| P5 | D4: confirmar Gradio fuera de producción | §2 | Fase 3 | ☑ Fuera (F3-03) |
 | P6 | D5: ¿dominio propio? | §2 | Fase 6 | ☐ |
-| P7 | Crear `modelo_e5/2_Normalize/` vacía en la imagen pesada | F1-07 | Fase 3 (`Dockerfile.pesada`) | ☐ |
+| P7 | Crear `modelo_e5/2_Normalize/` vacía en la imagen pesada | F1-07 | Fase 3 (`Dockerfile.pesada`) | ☑ F3-06 |
 | P8 | Cambios a `main.py` / `recursos.py` de §3.9 | §3.9 | **En pausa**: regla de no tocar el backend | ⏸ |
 | P9 | Borrar el servicio `ia-legal-mexicana-web` (y decidir sus imágenes en `ia-legal-repo`) | F1-13 | §5 Limpieza | ☐ |
 | P10 | Borrar la clave vieja: revocarla en DeepSeek y deshabilitar la versión 1 del secreto, **después** de validar `protocolo01-app-v2` (el servicio viejo la sigue usando hasta entonces) | §0 punto 7 | §5 Limpieza | ☐ |
@@ -104,6 +104,7 @@ Lista única de pendientes. Se marca aquí cuando se cierran (y en la bitácora 
 | P12 | Copias locales de `basic` y `faiss-lista` desactualizadas frente al bucket | F1-06, F1-08 | Informativo (regla: no se baja el acervo al repo) | — |
 | P13 | Quitar `roles/editor` (y el `objectViewer` redundante) a la cuenta de cómputo por defecto `879901246493-compute@…`, cuando `protocolo01-app` e `ia-legal-mexicana-web` ya no la usen | F2-02 | §5 Limpieza | ☐ |
 | P14 | Acotar `roles/run.developer` de `protocolo01-v2-build` del proyecto al servicio `protocolo01-app-v2` (hoy podría desplegar cualquier servicio, incluido `protocolo01-app`) | F2-07 | Fase 5, en cuanto exista el servicio | ☐ |
+| P15 | Decidir si se sube la rama `remake/protocolo01-v2` a GitHub (repo privado) | F3-14 | Cuando el responsable lo indique | ☐ |
 
 ---
 
@@ -193,6 +194,13 @@ gcloud iam service-accounts add-iam-policy-binding $SA_RUN \
 - [ ] Secreto creado con clave nueva; clave vieja revocada
 
 ### Fase 3 — Archivos del repo (propuestas, se aplican con luz verde una por una)
+
+> **Aplicada (2026-10-13).** Los borradores de abajo quedaron como referencia histórica; la
+> versión vigente es la del repo y el detalle de cada cambio está en `BITACORA-REMAKE-F3.md`.
+> Diferencias principales: se agregó `constraints.txt`; `Dockerfile.pesada` usa
+> `python:3.12-slim-bookworm` y comprueba imports y modelo en el build; `cloudbuild*.yaml`
+> declaran `serviceAccount` y protegen versiones y servicio; `minScale: 0` y `maxScale: 2`.
+> §3.9 (cambios a `main.py` / `recursos.py`) no se aplicó: P8 en pausa.
 
 #### 3.1 `requirements.txt` (producción, versiones fijas)
 
@@ -410,7 +418,7 @@ spec:
       annotations:
         run.googleapis.com/execution-environment: gen2   # requerido por el volumen GCS
         run.googleapis.com/startup-cpu-boost: "true"
-        autoscaling.knative.dev/minScale: "1"            # D3
+        autoscaling.knative.dev/minScale: "0"            # D3: decidido 0 (F3-08)
         autoscaling.knative.dev/maxScale: "3"            # tope de costo (D6)
     spec:
       serviceAccountName: protocolo01-v2-run@PROYECTO.iam.gserviceaccount.com
@@ -616,3 +624,4 @@ Dominio propio (D5), dos caminos:
 | 2026-10-12 | **Fase 1 completa** (detalle en `BITACORA-REMAKE-F1.md`): las 6 bases del bucket existen, son compatibles con `chromadb==1.4.0` y suman ≈163 MiB; modelo idéntico al local; 8 GiB / 2 vCPU / concurrencia 10 / us-central1. Correcciones en §0 (el servicio actual tiene 4 GiB y el bucket no tiene `/` final). |
 | 2026-10-12 | Se agrega §2-bis con los pendientes abiertos (P1–P12). Inicia Fase 2 (`BITACORA-REMAKE-F2.md`). |
 | 2026-10-13 | **Fase 2 completa** (detalle en `BITACORA-REMAKE-F2.md`): API `cloudresourcemanager`, repo `protocolo01-v2`, cuentas `protocolo01-v2-run`/`-build` con permisos mínimos, versión 2 del secreto. P1 y P2 cerrados; abiertos P13 y P14. Inicia Fase 3 (`BITACORA-REMAKE-F3.md`). |
+| 2026-10-13 | **Fase 3 completa** (detalle en `BITACORA-REMAKE-F3.md`): `requirements.txt` + `constraints.txt` (entorno del venv reproducido exacto), `Dockerfile.pesada`, `Dockerfile`, `cloudbuild-pesada.yaml`, `cloudbuild.yaml`, `startup.sh`, `deploy/service.yaml`, `.gcloudignore`, `.dockerignore`. Decisiones: Gradio fuera, `minScale: 0`, `maxScale: 2` provisional, `E2_HIGHCPU_8` para la pesada. Cerrados P3, P5, P7. Inicia Fase 4 (`BITACORA-REMAKE-F4.md`). |

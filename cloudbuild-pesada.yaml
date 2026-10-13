@@ -1,0 +1,52 @@
+# cloudbuild-pesada.yaml — Construye la imagen pesada de protocolo01-v2
+# Uso (solo cuando cambien requirements.txt, constraints.txt o el modelo):
+#   gcloud builds submit --config cloudbuild-pesada.yaml --substitutions=_VERSION_PESADA=v1
+# Cada reconstrucción usa una versión nueva (v2, v3…); nunca se sobrescribe una existente.
+# Costo: se cobra por minuto de build en e2-highcpu-8 (~$0.0156 USD/min, ~$0.25–0.40 por build).
+substitutions:
+  _REGION: us-central1
+  _REPO: protocolo01-v2
+  _BUCKET: chromadb-alma-juridica-aipp
+  _VERSION_PESADA: v1
+
+serviceAccount: projects/$PROJECT_ID/serviceAccounts/protocolo01-v2-build@$PROJECT_ID.iam.gserviceaccount.com
+
+steps:
+  # 1. Proteger versiones existentes: si la etiqueta ya existe, se detiene
+  - id: verificar-version
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        IMG=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/protocolo01-v2-pesada:${_VERSION_PESADA}
+        if gcloud artifacts docker images describe "$$IMG" >/dev/null 2>&1; then
+          echo "❌ $$IMG ya existe. Usa otra _VERSION_PESADA."; exit 1
+        fi
+        echo "✅ $$IMG está libre"
+
+  # 2. Bajar el modelo del bucket (solo lectura: el bucket no cambia)
+  - id: bajar-modelo
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args: ['storage', 'rsync', 'gs://${_BUCKET}/modelo_e5', './modelo_e5', '--recursive']
+
+  # 3. Construir con Dockerfile.pesada
+  - id: construir-pesada
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - Dockerfile.pesada
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/protocolo01-v2-pesada:${_VERSION_PESADA}
+      - .
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/protocolo01-v2-pesada:${_VERSION_PESADA}
+
+options:
+  machineType: E2_HIGHCPU_8
+  diskSizeGb: 100
+  logging: CLOUD_LOGGING_ONLY
+timeout: 3600s
