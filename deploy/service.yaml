@@ -37,7 +37,7 @@ spec:
           resources:
             limits:
               cpu: "2"
-              memory: 8Gi                                # F1-14: ~5.3 GiB estimados
+              memory: 4Gi                                # F4-09: ~1.2 GiB medidos, ~3.3 GiB estimados en frío
           startupProbe:
             httpGet:
               path: /api/estado

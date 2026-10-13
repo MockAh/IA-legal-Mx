@@ -3,7 +3,7 @@
 Desglose de la **Fase 4** de `BITACORA-REMAKE.md` en mini-tareas de ~15 minutos.
 
 - **Inicio:** 2026-10-13
-- **Estado:** en curso
+- **Estado:** completada (2026-10-13). Paso a Fase 5 pendiente de confirmación.
 - **Objetivo:** construir la imagen pesada y la ligera **en la PC**, arrancarlas con el acervo
   local montado como si fuera el bucket, y confirmar que el contenedor arranca, sirve el front
   y la API, carga el modelo y cabe en memoria. Con esto se decide la memoria final y se pasa a la
@@ -46,14 +46,14 @@ Desglose de la **Fase 4** de `BITACORA-REMAKE.md` en mini-tareas de ~15 minutos.
 | F4-02 | Revisar memoria disponible para Docker | Claude; tú si hay que ampliar | — | ☑ |
 | F4-03 | Construir la imagen pesada en local | Claude | — | ☑ |
 | F4-04 | Inspeccionar la pesada (tamaño, versiones) | Claude | — | ☑ |
-| F4-05 | Construir la imagen ligera en local | Claude | — | ☐ |
-| F4-06 | Inspeccionar la ligera (qué archivos lleva) | Claude | — | ☐ |
-| F4-07 | Arrancar el contenedor con el acervo local montado | Claude | — | ☐ |
-| F4-08 | Probar front y API sin DeepSeek | Claude | — | ☐ |
-| F4-09 | Medir memoria con el modelo cargado | Claude | — | ☐ |
-| F4-10 | Una consulta real por modo (DeepSeek) | Claude, **con tu autorización** | 2 llamadas | ☐ |
-| F4-11 | Pruebas de fallo controlado | Claude | — | ☐ |
-| F4-12 | Cierre: memoria final y paso a Fase 5 | Claude propone, tú decides | — | ☐ |
+| F4-05 | Construir la imagen ligera en local | Claude | — | ☑ |
+| F4-06 | Inspeccionar la ligera (qué archivos lleva) | Claude | — | ☑ |
+| F4-07 | Arrancar el contenedor con el acervo local montado | Claude | — | ☑ |
+| F4-08 | Probar front y API sin DeepSeek | Claude | — | ☑ |
+| F4-09 | Medir memoria con el modelo cargado | Claude | — | ☑ |
+| F4-10 | Una consulta real por modo (DeepSeek) | Claude, **con tu autorización** | 2 llamadas | ☑ |
+| F4-11 | Pruebas de fallo controlado | Claude | — | ☑ |
+| F4-12 | Cierre: memoria final y paso a Fase 5 | Claude propone, tú decides | — | ☑ |
 
 Total estimado: **~3.5 h** (la construcción de la pesada puede tardar 20–40 min por sí sola).
 
@@ -169,8 +169,10 @@ time docker build --build-arg IMAGEN_PESADA=protocolo01-v2-pesada:local \
 
 | Dato | Valor |
 |---|---|
-| Duración | |
-| Errores | |
+| Duración | **4.2 s** |
+| Contexto enviado | 112.6 KB (BuildKit solo envía lo que los `COPY` usan; el aviso de los 2 GB no aplicó) |
+| Tamaño | 6.01 GB (casi todo es la pesada; la capa propia de la ligera pesa KB) |
+| Errores | 0 |
 
 ---
 
@@ -189,9 +191,10 @@ docker run --rm --entrypoint sh protocolo01-v2-app:local -c 'head -3 /app/startu
 
 | Dato | Valor |
 |---|---|
-| Contenido de `/app` | |
-| `Zone.Identifier` / `.env` | |
-| `startup.sh` con LF | |
+| Contenido de `/app` | ✅ los 7 `.py` de ejecución, `web/` (`app.css`, `app.js`, `index.html`), `startup.sh`, `modelo_e5/` (con `2_Normalize`), y `requirements.txt` + `constraints.txt` (heredados de la pesada, inofensivos). Sin scripts de ingesta, pruebas ni prototipos. Sin acervo dentro de la imagen. |
+| `Zone.Identifier` / `.env` | ✅ ninguno en toda la imagen; sin claves `sk-` en código |
+| `startup.sh` con LF | ✅ 0 retornos de carro; ejecutable (`-rwxr-xr-x`) |
+| Configuración | `ENTRYPOINT ./startup.sh` · `WORKDIR /app` · `EXPOSE 8080` · `PORT=8080` · `HF_HUB_OFFLINE=1` |
 
 ---
 
@@ -215,9 +218,10 @@ escuchando en `0.0.0.0:8080`.
 
 | Dato | Valor |
 |---|---|
-| Tiempo hasta `Uvicorn running` | |
-| Bases copiadas / avisos | |
-| Errores | |
+| Tiempo hasta `Uvicorn running` | **~32 s** (incluye importar chromadb, langchain y torch) |
+| Bases copiadas / avisos | ✅ copió `basic` y `faiss-lista`; 5 avisos `⚠️ No existe` (segob, transp, 3p, fce, tramites), como se esperaba; `☁️ Parche SQLite aplicado` |
+| Montaje en solo lectura | ✅ `touch` en `/mnt/acervo` rechazado; el acervo local no cambió |
+| Errores | 0 |
 
 ---
 
@@ -234,15 +238,16 @@ curl -s localhost:8080/api/catalogo | python3 -c "import json,sys; d=json.load(s
 ```
 
 **Hecho cuando:** `/` y `/web/app.js` dan 200, `Zone.Identifier` da 404, `/api/estado` muestra
-`basic` disponible y las otras 5 no disponibles, y el catálogo da 43 títulos (los locales).
+`basic` disponible y las otras 5 no disponibles, y el catálogo da los títulos locales.
 
 | Prueba | Resultado |
 |---|---|
-| `/` | |
-| `/web/app.js` | |
-| `Zone.Identifier` (debe ser 404) | |
-| `/api/estado` | |
-| `/api/catalogo` | |
+| `/` | ✅ 200 (13.4 KB) |
+| `/web/app.js` | ✅ 200 (27 KB); también `app.css` e `index.html` 200 |
+| `Zone.Identifier` (debe ser 404) | ✅ 404 |
+| `/api/estado` | ✅ `basic` disponible (2170 docs); las otras 5 no. Bases: General disponible incompleta (faltan transp, 3p); FCE y Trámites SEGOB no disponibles |
+| `/api/catalogo` | ✅ 42 títulos en 5 materias (el JSON de inspección local lista 43 entradas; el catálogo agrupa por título, igual que en la prueba del 2026-10-12) |
+| `/api/docs` | 200: la documentación interactiva de la API (Swagger) queda accesible |
 
 ---
 
@@ -266,10 +271,25 @@ sleep 40; docker stats --no-stream p01v2       # con el modelo cargado (proceso 
 
 | Dato | Valor |
 |---|---|
-| Memoria en reposo | |
-| Memoria con el modelo cargado | |
-| Tiempo de carga del modelo | |
-| ¿Cabe holgado en 8 GiB? | |
+| Memoria en reposo | **361 MiB** (servidor con `basic` abierta) |
+| Memoria con el modelo cargado | **~1.0–1.2 GiB** medidos (`docker stats` y `memory.peak` del cgroup). Desglose: 0.82 GiB de RAM propia del proceso + 0.35 GiB de caché de archivos |
+| Tiempo de carga del modelo | **39.4 s** + primera vectorización **26.4 s** (lee los pesos del disco bajo demanda); después ~0.4 s por consulta (10 en 4.3 s) |
+| ¿Cabe holgado en 8 GiB? | ✅ Sobradamente |
+
+**Lectura de la medición:** los pesos del modelo (2.1 GB) se leen como archivo mapeado en
+memoria. En esta PC parte de esas páginas ya estaban en caché por el build y Linux se las cobra a
+quien las leyó primero, así que la cifra medida **subestima** lo que verá una instancia nueva en
+Cloud Run. Estimación prudente para una instancia en frío: 0.82 (proceso) + ~2.1 (pesos) +
+0.36 (servidor) ≈ **3.3 GiB**, más margen para 10 consultas simultáneas. Además, esas páginas
+de archivo son recuperables: si la memoria aprieta, el sistema las libera y las vuelve a leer, en
+lugar de matar el contenedor.
+
+**Dato de contraste:** el servicio viejo `protocolo01-app` funciona hoy con **4 GiB** guardando
+además una copia de 2.1 GB del modelo en su disco en memoria. El diseño nuevo no tiene esa copia.
+
+**Tiempo de la primera consulta** en una instancia nueva (con `minScale: 0`): ~32 s de arranque +
+~65 s de carga del modelo y primera vectorización + DeepSeek ≈ **1.5–2 min** (en la nube puede
+bajar algo por el impulso de CPU al arrancar).
 
 ---
 
@@ -300,9 +320,11 @@ curl -sN -X POST localhost:8080/api/consulta/stream -H 'Content-Type: applicatio
 
 | Prueba | Resultado |
 |---|---|
-| Cita Precisa (General) | |
-| Razonamiento (General, streaming) | |
-| Tiempo de la primera consulta (incluye carga del modelo) | |
+| Cita Precisa (General) | ✅ `ok: true` en 5.7 s · *"artículo 1 de la Constitución"* → LEY: Constitución Política de los Estados Unidos Mexicanos, ARTÍCULO 1, texto literal con `contenedor-legal` / `parrafo-legal` |
+| Razonamiento (General, streaming) | ✅ HTTP 200 en 7.8 s · primer byte en 0.009 s · 2 eventos `estado`, 855 `texto`, 1 `fin`, 0 `error` · respuesta con fundamentos y "Fuentes consultadas" |
+| Tiempo de la primera consulta (incluye carga del modelo) | 5.7 s en esta PC, pero con la caché de archivos ya caliente por F4-09; **no representa** una instancia nueva en la nube (ver F4-09: ~1.5–2 min) |
+| Autorización | Responsable, 2026-10-13. Clave pasada con `--env-file .env` sin que Claude la leyera |
+| Consulta extra con FAISS (autorizada) | ✅ *"artículo 1 del Código Penal Federal"* en 1.7 s · DeepSeek extrajo `Ley='Codigo Penal Federal', Artículo=1` · FAISS cargó 43 vectores y resolvió `'Codigo-Penal-Federal'` con **similitud 0.9888** · `normalizar_titulo` → `'codigo penal federal'` · Chroma filtró por título + artículo + `Transitorio=Principal` · devolvió el texto literal y la fuente `1931-08-14_Codigo_Codigo-Penal-Federal_legal.docx` |
 
 ---
 
@@ -322,8 +344,9 @@ rmdir /tmp/acervo-vacio
 
 | Prueba | Resultado |
 |---|---|
-| Sin volumen | |
-| Volumen vacío | |
+| Sin volumen | ✅ 7 avisos `⚠️ No existe` → `❌ Falta faiss-lista…` → salida **1**; no arranca el servidor |
+| Volumen vacío | ✅ mismo comportamiento → salida **1** |
+| Efecto en la nube | Una instancia sin acervo falla al arrancar y Cloud Run **no le manda tráfico** (la revisión vieja sigue atendiendo) |
 
 ---
 
@@ -338,9 +361,10 @@ docker rm -f p01v2
 
 | Decisión | Valor |
 |---|---|
-| Memoria del servicio (`deploy/service.yaml`) | (8 GiB salvo que F4-09 diga otra cosa) |
-| Cambios necesarios a archivos de la Fase 3 | |
-| ¿Pasar a Fase 5? | ☐ Sí ☐ No — motivo: |
+| Memoria del servicio (`deploy/service.yaml`) | **4 GiB** (aprobado por el responsable el 2026-10-13; antes 8 GiB). 2 vCPU sin cambio |
+| Cambios necesarios a archivos de la Fase 3 | `constraints.txt` (+5 −9, F4-04) y `deploy/service.yaml` (memoria). Ninguno obliga a reconstruir las imágenes |
+| Limpieza | Contenedor `p01v2` borrado. Se conservan `protocolo01-v2-pesada:local` y `protocolo01-v2-app:local` hasta terminar la Fase 5 |
+| ¿Pasar a Fase 5? | Pendiente de confirmación del responsable (la Fase 5 tiene costo y crea recursos) |
 
 ---
 
@@ -349,6 +373,10 @@ docker rm -f p01v2
 | Tarea | Hallazgo | Impacto | Acción propuesta |
 |---|---|---|---|
 | F4-04 | `constraints.txt` tiene 9 entradas que no se instalan y le faltan 5 que sí se instalan (hoy salen con la versión del venv, pero sin garantía en un build futuro). | Ninguno ahora; riesgo bajo a futuro. | **Aplicado** (aprobado por el responsable): `constraints.txt` queda con 95 restricciones (+5, −9). Validado con `--dry-run`: resolvería exactamente los mismos 110 paquetes y versiones que la pesada local → **no hace falta reconstruirla**; el build en la nube (Fase 5) usará el archivo nuevo y dará el mismo resultado. |
+| F4-08 | `/api/docs` (Swagger) es accesible; en la nube será público. | Muestra la forma de la API a cualquiera; no expone datos ni claves. | Informativo. Quitarlo requiere tocar `main.py` (regla: no). Decidir en Fase 6 si importa. |
+| F4-09 | La memoria real es mucho menor que la estimada en F1-14 (~5.3 GiB): ~1.2 GiB medidos, ~3.3 GiB estimados en frío. | 8 GiB es más del doble de lo necesario; se paga por GiB-segundo mientras la instancia está activa. | Decidir en F4-12: bajar a 4 GiB (recomendado; mismo que el servicio viejo) o mantener 8. |
+| F4-09 | `transformers` avisa *"tokenizer … incorrect regex pattern … fix_mistral_regex"* al cargar el modelo. | Mismas versiones que el venv local (F4-04), así que el comportamiento es idéntico al que ya se usa. El aviso viene de una revisión para tokenizadores de Mistral. | Informativo. Verificar en F4-10 que Cita Precisa encuentre bien la ley. |
+| F4-10 | La prueba de Cita Precisa usó la Constitución (regla fija en `logica_a.py`), así que no ejercitó FAISS. | La búsqueda de títulos coloquiales, la parte más frágil (CLAUDE.md §3), queda sin probar en la imagen. | **Resuelto:** consulta extra autorizada; FAISS funciona en la imagen (similitud 0.9888). El aviso del tokenizador (F4-09) no afectó. |
 | (previo) | WSL está limitado a 8 GB (`.wslconfig`) y Docker Desktop comparte esa memoria. | El contenedor local no podrá usar los 8 GiB del servicio; ~6 GiB como máximo. | Probar con `-m 6g`; si no alcanza, ampliar `.wslconfig` (F4-02). |
 | (previo) | `main.py` ya limita `query` a 4000 caracteres. | Un límite parcial de uso ya existe sin tocar código. | Anotarlo en D6/P4. |
 | (previo) | En local solo existe `basic` (y desactualizada); faltan 5 bases. | FCE y Trámites SEGOB no se pueden probar en local. | Probarlos en la nube (Fase 5). Regla: no se baja el acervo. |
@@ -365,3 +393,12 @@ docker rm -f p01v2
 | 2026-10-13 | F4-03 hecha (Claude): pesada local construida en 10.5 min; imports y modelo verificados en el build. |
 | 2026-10-13 | F4-04 hecha (Claude): la pesada reproduce el venv exacto (0 diferencias); 6.01 GB; Python 3.12.15. |
 | 2026-10-13 | `constraints.txt` ajustado (+5 −9 → 95). Equivalencia con la pesada local verificada: 110/110 iguales. |
+| 2026-10-13 | F4-05 hecha (Claude): ligera construida en 4.2 s; contexto de 112.6 KB. |
+| 2026-10-13 | F4-06 hecha (Claude): la ligera lleva solo lo de ejecución; sin `Zone.Identifier`, `.env` ni claves. |
+| 2026-10-13 | F4-07 hecha (Claude): contenedor `p01v2` arriba en ~32 s con `basic` + `faiss-lista`; montaje de solo lectura confirmado. |
+| 2026-10-13 | F4-08 hecha (Claude): front y API responden; `Zone.Identifier` 404; estado y catálogo correctos con el acervo local. |
+| 2026-10-13 | F4-09 hecha (Claude): reposo 361 MiB; con modelo ~1.2 GiB medidos (~3.3 GiB estimados en frío); carga 39 s + 26 s primera vectorización. |
+| 2026-10-13 | F4-10 hecha (Claude, autorizado): Cita Precisa y Razonamiento responden de punta a punta en la imagen. FAISS no se ejercitó (Constitución por regla fija). |
+| 2026-10-13 | F4-10 (extra, autorizada): Cita Precisa con Código Penal Federal pasa por FAISS → Chroma correctamente. Ruta completa de Lógica A verificada. |
+| 2026-10-13 | F4-11 hecha (Claude): sin volumen y con volumen vacío, `startup.sh` se detiene con `❌ Falta faiss-lista` y salida 1. |
+| 2026-10-13 | F4-12 hecha: **Fase 4 completa.** Memoria del servicio 8 → 4 GiB (aprobado). Contenedor de pruebas borrado; imágenes locales conservadas. |
