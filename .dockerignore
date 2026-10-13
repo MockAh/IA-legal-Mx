@@ -1,14 +1,16 @@
-# Excluir bases de datos locales
+# .dockerignore — Lo que Docker NO ve al construir
+# OJO: NO excluir modelo_e5/ — la imagen pesada lo copia (cloudbuild-pesada.yaml lo baja)
 procesado-mx/
 procesado-unam/
-
-# Excluir documentos originales
+faiss-lista/
 Axiomas/
-
-# Excluir entornos virtuales y caché
-venv/
+*.csv
 .env
+llamada_deepseek.txt
+venv/
+.venv/
 __pycache__/
 *.pyc
+**/*:Zone.Identifier
 .git
-.gitignore
+docs/

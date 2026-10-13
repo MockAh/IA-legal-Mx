@@ -1,0 +1,33 @@
+# Dockerfile.pesada — Imagen pesada de protocolo01-v2
+# Python 3.12 + dependencias fijas + modelo e5 incluido en la imagen.
+# Se reconstruye solo si cambian requirements.txt, constraints.txt o el modelo
+# (cloudbuild-pesada.yaml). La imagen ligera (Dockerfile) parte de esta.
+FROM python:3.12-slim-bookworm
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    HF_HUB_OFFLINE=1 \
+    TRANSFORMERS_OFFLINE=1
+
+# libgomp1: lo requieren torch y faiss en CPU
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# torch desde el índice de CPU (sin CUDA: imagen mucho más chica)
+RUN pip install torch==2.9.1 --index-url https://download.pytorch.org/whl/cpu
+
+COPY requirements.txt constraints.txt ./
+RUN pip install -r requirements.txt -c constraints.txt
+
+# El modelo lo baja Cloud Build desde el bucket (cloudbuild-pesada.yaml)
+COPY modelo_e5/ /app/modelo_e5/
+# Storage no guarda carpetas vacías y modules.json la menciona (F1-07, P7)
+RUN mkdir -p /app/modelo_e5/2_Normalize
+
+# Comprobaciones: si algo falta, el build falla aquí y no en producción (F3-02)
+RUN python -c "import pysqlite3, faiss, chromadb, langchain_huggingface, fastapi, uvicorn; print('imports ok')"
+RUN python -c "from sentence_transformers import SentenceTransformer as S; \
+v = S('/app/modelo_e5', device='cpu').encode('prueba'); assert len(v) == 1024; print('modelo ok', len(v))"

@@ -1,23 +1,40 @@
 #!/bin/bash
-set -e
+# startup.sh — Arranque del contenedor protocolo01-app-v2
+# 1. Copia el acervo desde el volumen del bucket (solo lectura) a /app.
+#    Se copia porque Chroma escribe en chroma.sqlite3 al abrirlo (F1-08).
+# 2. Lanza main.py (uvicorn en $PORT).
+set -euo pipefail
 
-# 1. Sincronizar la carpeta de Vectores (ChromaDB)
-echo "⬇️ Sincronizando carpeta 'procesado-mx'..."
-gcloud storage rsync $GCS_BUCKET_PATH/procesado-mx ./procesado-mx -r
+ACERVO_DIR="${ACERVO_DIR:-/mnt/acervo}"
+APP_DIR="/app"
 
-# 2. CRÍTICO: Sincronizar el Índice de Títulos (FAISS)
-# Sin esto, el catálogo y la Lógica A fallarán.
-echo "⬇️ Sincronizando carpeta 'faiss-lista'..."
-gcloud storage rsync $GCS_BUCKET_PATH/faiss-lista ./faiss-lista -r
+# Solo lo que usa recursos.py (F1-04, F1-11). El resto del bucket no se copia.
+CARPETAS=(
+  "procesado-mx/basic-mx/chroma_db_basic"
+  "procesado-mx/segob-mx/chroma_db_segob"
+  "procesado-mx/transp-mx/chroma_db_transp"
+  "procesado-mx/3p-mx/chroma_db_3p"
+  "procesado-mx/fce-mx/chroma_db_fce"
+  "procesado-mx/tramites-mx/chroma_db_tramites_mx"
+  "faiss-lista"
+)
 
-# 3. Sincronizar UNAM (Independiente)
-echo "⬇️ Sincronizando carpeta 'procesado-unam'..."
-gcloud storage rsync $GCS_BUCKET_PATH/procesado-unam ./procesado-unam -r
+for carpeta in "${CARPETAS[@]}"; do
+  origen="$ACERVO_DIR/$carpeta"
+  if [ -d "$origen" ]; then
+    echo "⬇️  Copiando $carpeta"
+    mkdir -p "$APP_DIR/$(dirname "$carpeta")"
+    cp -r "$origen" "$APP_DIR/$carpeta"
+  else
+    # No se aborta: /api/estado reporta el acervo faltante y el front lo deshabilita
+    echo "⚠️  No existe $origen"
+  fi
+done
 
-# 4. Descarga del Modelo de Embeddings (Caché local)
-echo "🧠 Descargando modelo de IA..."
-gcloud storage rsync $GCS_BUCKET_PATH/modelo_e5 ./modelo_e5 -r
+if [ ! -f "$APP_DIR/faiss-lista/metadata_titulos_leyes.pkl" ]; then
+  echo "❌ Falta faiss-lista: Cita Precisa y el catálogo no pueden funcionar."
+  exit 1
+fi
 
 echo "🚀 Iniciando Wall-E Legal 2.0..."
-# El flag -u asegura que los logs se vean en tiempo real en Google Cloud
-python3 -u main.py          # antes: python3 -u app.py
+exec python3 -u main.py
