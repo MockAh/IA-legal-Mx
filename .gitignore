@@ -39,3 +39,6 @@ procesado-mx/
 procesado-unam/
 faiss-lista/
 __pycache__/
+
+# Metadatos de Windows al copiar archivos
+*:Zone.Identifier

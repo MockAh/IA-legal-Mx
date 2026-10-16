@@ -314,6 +314,8 @@ Separada de la etapa B por decisión del responsable (2026-10-16): todo lo que e
 |---|---|
 | C1a — respaldo de `mi-proyecto-axiomas` | ✅ 2026-10-16 (Claude, solo lectura en GCP): copiado a `~/respaldos/mi-proyecto-axiomas/` (fuera del repo). 47 archivos, 5 026 692 bytes, idéntico al bucket; las 2 "carpetas" vacías del bucket (`scripts/procesado-mx/…`) recreadas a mano. Sin referencias al bucket en el código. *Soft delete* de 7 días activo |
 | C1b — borrar el bucket | ✅ 2026-10-16 (responsable, con `!`; a Claude se lo bloqueó el filtro de auto mode): `gcloud storage rm -r gs://mi-proyecto-axiomas`. Quedan `chromadb-alma-juridica-aipp` y `alma-juridica-aipp_cloudbuild`; servicio nuevo 200. En *soft delete* hasta el **2026-10-23 09:45 UTC** (generación `1766826859660735302`); restaurar: `gcloud alpha storage buckets restore gs://mi-proyecto-axiomas#1766826859660735302` |
+| C2 — `llamada_deepseek.txt` | ✅ 2026-10-16 (Claude, autorizado): borrado sin abrirlo (700 bytes, del 2026-03-18). Ignorado por `.gitignore:36`; nunca estuvo en el historial de git |
+| C3 — limpieza del repo | ✅ 2026-10-16 (Claude, aprobado A y B con la opción *legado*): **A)** 22 `*:Zone.Identifier` borrados (2 versionados) y `*:Zone.Identifier` agregado a `.gitignore`. **B)** a `legado/`: `Dockerfile.base`, `GUIA_RAPIDA.sh`, `rag_app_deepseek.py`, `index.html` y `app.css` de la raíz. `rag_chat_segob_d.py` se queda en la raíz (lo importa `test_81_homoclaves_d.py`). `CLAUDE.md` §3 actualizado. La imagen no cambia (el `Dockerfile` copia módulos por nombre) |
 
 ## F6-10 — Unir la rama a `master`
 
@@ -387,3 +389,5 @@ gh pr create --base master --head remake/protocolo01-v2 --title "Rehecho protoco
 | 2026-10-16 | B5 hecha (responsable): versión 1 del secreto destruida (cierra P10). Siguiente: 2.ª pasada de F6-05 el 2026-10-20. |
 | 2026-10-16 | La revisión del 2026-10-20 pasa a ser la **etapa E** (E1 logs, E2 `minScale`, E3 tamaño de `gcr.io`). Etapa C reanudada por el responsable: C1a hecha (respaldo local de `mi-proyecto-axiomas`). |
 | 2026-10-16 | C1b hecha (responsable): bucket `mi-proyecto-axiomas` borrado, recuperable hasta el 2026-10-23 (cierra P16). |
+| 2026-10-16 | C2 hecha (Claude, autorizado): `llamada_deepseek.txt` borrado (cierra P11). |
+| 2026-10-16 | C3 hecha (Claude, aprobada): Zone.Identifier fuera y archivos del esquema viejo en `legado/`. Queda C4 (Docker Desktop, P21) y luego F6-10. |

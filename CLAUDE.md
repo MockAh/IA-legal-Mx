@@ -69,7 +69,7 @@ requirements_local.txt      Dependencias de desarrollo local
 docs/                       Guía de operación (OPERACION.md) y bitácoras del rehecho (BITACORA-REMAKE*.md)
 ```
 
-`Dockerfile.base`, `GUIA_RAPIDA.sh`, los prototipos (`rag_app_deepseek.py`, `rag_chat_segob_d.py`) y las copias `index.html`/`app.css` de la raíz son del esquema anterior; su destino se decide en la limpieza (F6-09).
+`legado/` guarda lo del esquema anterior (`Dockerfile.base`, `GUIA_RAPIDA.sh`, el prototipo `rag_app_deepseek.py` y las copias viejas de `index.html`/`app.css`); no entra en la imagen ni se usa. El prototipo `rag_chat_segob_d.py` sigue en la raíz porque lo importa `test_81_homoclaves_d.py`.
 
 ### Datos que NO viven en el repo
 
