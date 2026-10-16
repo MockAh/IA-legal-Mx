@@ -39,7 +39,7 @@ Desglose de la **Fase 6** de `BITACORA-REMAKE.md` en mini-tareas de ~15 minutos.
 | F6-02 | Hacer público el servicio (`allUsers` → invocador) | Claude, **con tu autorización** | **Cualquiera puede usarlo** | ☑ |
 | F6-03 | Verificar desde fuera, sin credenciales | Claude | — | ☑ |
 | F6-04 | Probar desde otro dispositivo y red (celular con datos) | **Tú** | 1–2 consultas | ☑ |
-| F6-05 | Revisar los logs desde la apertura (ventana acumulada; repetir a los 7 días) | Claude | — | ◐ 1.ª pasada; 2.ª el 2026-10-20 |
+| F6-05 | Revisar los logs desde la apertura (ventana acumulada; repetir a los 7 días) | Claude | — | ◐ 1.ª pasada; 2.ª en la etapa E (2026-10-20) |
 | F6-06 | Decidir sobre `/api/docs` (Swagger público) | **Tú** | — | ☑ diferida → P20 |
 | F6-07 | Actualizar `CLAUDE.md` y `readme.md` con la arquitectura nueva | Claude propone, tú apruebas | Cambia documentación | ☑ |
 | F6-08 | Guía de operación (desplegar, revertir, actualizar acervo) | Claude propone, tú apruebas | Archivo nuevo en `docs/` | ☑ |
@@ -297,6 +297,24 @@ Cómo reactivarla: quitar la restricción de D1 (`add-iam-policy-binding … --m
 
 ---
 
+### Etapa E — Revisión a 7 días (2026-10-20)
+
+Separada de la etapa B por decisión del responsable (2026-10-16): todo lo que espera al
+2026-10-20 se agrupa aquí. Solo lectura, salvo la decisión de `minScale`.
+
+| Paso | Qué | Quién | Hecho |
+|---|---|---|---|
+| E1 | 2.ª pasada de F6-05: logs de la semana con `--freshness=7d` (errores, consultas, arranques en frío, tráfico inesperado) | Claude | |
+| E2 | Decidir `minScale` (0, 1 o 1 en horario de uso; ver §Hallazgos F6-05) | **Responsable** | |
+| E3 | Confirmar que `gcr.io` bajó a ~5 GB tras D2 | Claude | |
+
+### Etapa C — ejecución
+
+| Dato | Valor |
+|---|---|
+| C1a — respaldo de `mi-proyecto-axiomas` | ✅ 2026-10-16 (Claude, solo lectura en GCP): copiado a `~/respaldos/mi-proyecto-axiomas/` (fuera del repo). 47 archivos, 5 026 692 bytes, idéntico al bucket; las 2 "carpetas" vacías del bucket (`scripts/procesado-mx/…`) recreadas a mano. Sin referencias al bucket en el código. *Soft delete* de 7 días activo |
+| C1b — borrar el bucket | ✅ 2026-10-16 (responsable, con `!`; a Claude se lo bloqueó el filtro de auto mode): `gcloud storage rm -r gs://mi-proyecto-axiomas`. Quedan `chromadb-alma-juridica-aipp` y `alma-juridica-aipp_cloudbuild`; servicio nuevo 200. En *soft delete* hasta el **2026-10-23 09:45 UTC** (generación `1766826859660735302`); restaurar: `gcloud alpha storage buckets restore gs://mi-proyecto-axiomas#1766826859660735302` |
+
 ## F6-10 — Unir la rama a `master`
 
 ```bash
@@ -367,3 +385,5 @@ gh pr create --base master --head remake/protocolo01-v2 --title "Rehecho protoco
 | 2026-10-16 | D2 hecha (Claude, autorizado): `gcr.io` reducido a la imagen de la v1. Ojo: las revisiones viejas de `protocolo01-app` (00001–00011) ya no tienen imagen; solo sirven `00012` y `00013` (misma imagen). Queda pendiente confirmar que el tamaño baje a ~5 GB. |
 | 2026-10-16 | B4 hecha (Claude, autorizado): sin `roles/editor` en la cuenta de cómputo; v1 dormida sigue arrancando y v2 en 200. |
 | 2026-10-16 | B5 hecha (responsable): versión 1 del secreto destruida (cierra P10). Siguiente: 2.ª pasada de F6-05 el 2026-10-20. |
+| 2026-10-16 | La revisión del 2026-10-20 pasa a ser la **etapa E** (E1 logs, E2 `minScale`, E3 tamaño de `gcr.io`). Etapa C reanudada por el responsable: C1a hecha (respaldo local de `mi-proyecto-axiomas`). |
+| 2026-10-16 | C1b hecha (responsable): bucket `mi-proyecto-axiomas` borrado, recuperable hasta el 2026-10-23 (cierra P16). |
