@@ -112,7 +112,7 @@ Lista única de pendientes. Se marca aquí cuando se cierran (y en la bitácora 
 | P18 | Configurar el límite de gasto en DeepSeek y una alerta de presupuesto en Google Cloud (Facturación → Presupuestos y alertas) | F5-13 | **El responsable**, antes de abrir al público (Fase 6) |☑ resuelto por el responsable (2026-10-13) |
 | P19 | Límite de consultas por IP (no existe; la longitud de `query` sí está acotada a 4000 caracteres en `main.py:64`). Corregido el 2026-10-13: antes decía, por error, que faltaba el límite de longitud | Revisión de bitácoras (2026-10-13) | Junto con P8: requiere tocar `main.py` (o Cloud Armor) | ⏸ |
 | P20 | Quitar la documentación pública de la API: `docs_url=None, openapi_url=None` en `main.py:34` (hoy `/api/docs` y `/openapi.json` responden 200) | F6-06 | En el próximo cambio a `main.py` (junto con P8/P19) | ⏸ |
-| P21 | Liberar ~21 GB en la PC: borrar las imágenes y la caché de construcción locales de Docker Desktop (Fase 4; las de producción viven en Artifact Registry) y **compactar** `docker_data.vhdx` (no se encoge solo). Medido el 2026-10-13: 21.1 GB | Pregunta del responsable (2026-10-13) | Al terminar la Fase 6, con autorización | ☐ |
+| P21 | Liberar ~21 GB en la PC: borrar las imágenes y la caché de construcción locales de Docker Desktop (Fase 4; las de producción viven en Artifact Registry) y **compactar** `docker_data.vhdx` (no se encoge solo). Medido el 2026-10-13: 21.1 GB | Pregunta del responsable (2026-10-13) | Al terminar la Fase 6, con autorización | ☑ imágenes y caché borradas; `.vhdx` compactado de 21.1 a 3.27 GB (2026-10-16, F6-09 C4) |
 
 ---
 
@@ -645,3 +645,4 @@ Dominio propio (D5), dos caminos:
 | 2026-10-13 | P19 corregido: el límite de longitud ya existía (4000); el hueco real es el límite por IP. Nuevo P20 (quitar `/api/docs` y `/openapi.json`, decisión F6-06). |
 | 2026-10-13 | F6-07: `CLAUDE.md` actualizado a la arquitectura aplicada (aprobado por el responsable). Nuevo P21 (liberar ~21 GB de Docker Desktop al terminar la Fase 6). |
 | 2026-10-13 | F6-09 etapa A completa: claves viejas revocadas (responsable), `ia-legal-mexicana-web` y 2 Cloud Run Jobs borrados, versión 1 del secreto deshabilitada, `ia-legal-repo` borrado (−51.7 GB). P9 cerrado. |
+| 2026-10-16 | F6-09 etapa C completa (C1–C4): `mi-proyecto-axiomas` respaldado y borrado, repo limpio, Docker Desktop vaciado y `.vhdx` compactado (−17.84 GB). P11, P16 y P21 cerrados. |
