@@ -293,6 +293,7 @@ Cómo reactivarla: quitar la restricción de D1 (`add-iam-policy-binding … --m
 | D1 | ✅ 2026-10-16 (Claude, autorizado): `allUsers` quitado; política IAM vacía. Sin token: **403** (los primeros segundos dio 200 mientras se propagaba el cambio). `protocolo01-app-v2` sigue en 200 |
 | D2 | ✅ 2026-10-16 (Claude, autorizado): 10 versiones borradas: 5 de `protocolo01-app` (una, `fdcac835…`, no salió en el primer listado porque lo corté con `head`; la usaba la revisión `00009`, sin tráfico), `protocolo01-base` ×2, `embeddings-rag` ×2 y `motor-embeddings-base` ×1. **Queda solo `protocolo01-app@sha256:ab61e2d…` (`latest`)**. El tamaño del repositorio (33.3 GB) no había bajado al terminar: Artifact Registry lo recalcula después. `protocolo01-app-v2`: 200 |
 | B4 | ✅ 2026-10-16 (Claude, autorizado): `roles/editor` quitado a `879901246493-compute@…`; le quedan `storage.objectViewer` (proyecto) y `secretAccessor` (secreto). Respaldo previo de la política IAM, fuera del repo. Verificado: v2 200; v1 con token 200 (arranque en frío de **169 s**, esquema viejo con rsync), sin token 403; sin avisos en sus logs. Revertir: `add-iam-policy-binding … --role=roles/editor` |
+| B5 | ✅ 2026-10-16 (responsable, desde la sesión con `!`; a Claude se lo bloqueó el filtro de auto mode): versión 1 de `DEEPSEEK_API_KEY` `destroyed`; v2 `enabled`; servicio nuevo 200 |
 
 ---
 
@@ -365,3 +366,4 @@ gh pr create --base master --head remake/protocolo01-v2 --title "Rehecho protoco
 | 2026-10-16 | D1 hecha (Claude, autorizado): `protocolo01-app` privado (403 sin token); el servicio nuevo sigue en 200. Siguiente: D2. |
 | 2026-10-16 | D2 hecha (Claude, autorizado): `gcr.io` reducido a la imagen de la v1. Ojo: las revisiones viejas de `protocolo01-app` (00001–00011) ya no tienen imagen; solo sirven `00012` y `00013` (misma imagen). Queda pendiente confirmar que el tamaño baje a ~5 GB. |
 | 2026-10-16 | B4 hecha (Claude, autorizado): sin `roles/editor` en la cuenta de cómputo; v1 dormida sigue arrancando y v2 en 200. |
+| 2026-10-16 | B5 hecha (responsable): versión 1 del secreto destruida (cierra P10). Siguiente: 2.ª pasada de F6-05 el 2026-10-20. |
