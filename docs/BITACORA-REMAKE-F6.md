@@ -43,7 +43,7 @@ Desglose de la **Fase 6** de `BITACORA-REMAKE.md` en mini-tareas de ~15 minutos.
 | F6-06 | Decidir sobre `/api/docs` (Swagger público) | **Tú** | — | ☑ diferida → P20 |
 | F6-07 | Actualizar `CLAUDE.md` y `readme.md` con la arquitectura nueva | Claude propone, tú apruebas | Cambia documentación | ☑ |
 | F6-08 | Guía de operación (desplegar, revertir, actualizar acervo) | Claude propone, tú apruebas | Archivo nuevo en `docs/` | ☑ |
-| F6-09 | Plan de limpieza del esquema viejo (orden y fechas) | Claude propone, tú decides | — (solo plan) | ☑ aprobado; ejecución en curso (A1 ✅) |
+| F6-09 | Plan de limpieza del esquema viejo (orden y fechas) | Claude propone, tú decides | — (solo plan) | ☑ aprobado; etapa A ✅; v1 "dormida" (2026-10-16) |
 | F6-10 | Unir la rama `remake/protocolo01-v2` a `master` (PR) | Tú decides | Git / GitHub | ☐ |
 | F6-11 | Cierre del rehecho | Claude propone, tú decides | — | ☐ |
 
@@ -267,6 +267,32 @@ y §2-bis: `protocolo01-app`, `ia-legal-mexicana-web` (P9), `mi-proyecto-axiomas
 | A3-bis — borrar los Cloud Run Jobs `job-indexador-legal` y `procesar-embeddings-job` | ✅ 2026-10-13 (Claude, autorizado). No queda ningún job; servicio nuevo 200 |
 | A4 — borrar el repositorio `ia-legal-repo` | ✅ 2026-10-13 (Claude, autorizado): 25 imágenes, 51.7 GB. Quedan `gcr.io` (31.8 GB, B3) y `protocolo01-v2` (1.8 GB, en uso); servicio nuevo 200 |
 
+### Cambio al plan (2026-10-16): `protocolo01-app` se conserva "dormido"
+
+Decisión del responsable: **no borrar la v1**, sino dejarla guardada sin costo de uso.
+
+Datos (2026-10-16, solo lectura):
+
+- Sin `minScale` (escala a 0) · `maxScale: 20` · revisión `00013-6zv` con el 100 % (13 revisiones en total).
+- Imagen en uso: `gcr.io/alma-juridica-aipp/protocolo01-app@sha256:ab61e2d…` (etiqueta `latest`, 2026-03-19, ~5 GB).
+- Apagado no cobra CPU. Lo que cuesta es el almacenamiento de `gcr.io` (~3.2 USD/mes) y DeepSeek mientras siga público.
+
+| Paso | Qué | Sustituye a | Reversible |
+|---|---|---|---|
+| D1 | Hacer **privado** `protocolo01-app` (quitar `allUsers`) | B1 | Sí, en segundos |
+| D2 | Borrar de `gcr.io` **todo menos** `protocolo01-app@sha256:ab61e2d…` (`latest`): 4 digests viejos de `protocolo01-app`, `protocolo01-base` (2), `embeddings-rag` (v1, v3) y `motor-embeddings-base` (v1). Quedan ~5 GB, unos 0.50 USD/mes | B3 | No |
+| — | **No se borra el servicio** | B2 (cancelado) | — |
+| B4 | Quitar `roles/editor` a la cuenta de cómputo. **No rompe el servicio dormido:** conserva `storage.objectViewer` (bucket) y `secretAccessor` sobre `DEEPSEEK_API_KEY`, y la imagen la descarga el agente de Cloud Run, no esta cuenta. Se quita `editor` y se conserva `objectViewer`, al revés de lo que planteaba P13 | B4 (ajustado) | Sí |
+| B5 | Destruir la versión 1 del secreto (sin cambio: el servicio viejo usa `latest`) | — | No |
+
+Cómo reactivarla: quitar la restricción de D1 (`add-iam-policy-binding … --member=allUsers --role=roles/run.invoker`). El código de la v1 está en `master`.
+
+| Dato | Valor |
+|---|---|
+| Cambio aprobado | ✅ 2026-10-16 (responsable) |
+| D1 | ✅ 2026-10-16 (Claude, autorizado): `allUsers` quitado; política IAM vacía. Sin token: **403** (los primeros segundos dio 200 mientras se propagaba el cambio). `protocolo01-app-v2` sigue en 200 |
+| D2 | ✅ 2026-10-16 (Claude, autorizado): 10 versiones borradas: 5 de `protocolo01-app` (una, `fdcac835…`, no salió en el primer listado porque lo corté con `head`; la usaba la revisión `00009`, sin tráfico), `protocolo01-base` ×2, `embeddings-rag` ×2 y `motor-embeddings-base` ×1. **Queda solo `protocolo01-app@sha256:ab61e2d…` (`latest`)**. El tamaño del repositorio (33.3 GB) no había bajado al terminar: Artifact Registry lo recalcula después. `protocolo01-app-v2`: 200 |
+
 ---
 
 ## F6-10 — Unir la rama a `master`
@@ -333,3 +359,7 @@ gh pr create --base master --head remake/protocolo01-v2 --title "Rehecho protoco
 | 2026-10-13 | A4 detenida antes de ejecutar: aparecen 2 Cloud Run Jobs que dependen de los registros viejos y de `mi-proyecto-axiomas`. Se propone borrarlos primero. |
 | 2026-10-13 | A3-bis hecha (Claude, autorizado): los 2 jobs borrados. Comprobado que nada más usa `ia-legal-repo`: sin triggers de Cloud Build, sin VMs, Cloud Functions y Scheduler deshabilitados; ningún servicio usa su imagen. |
 | 2026-10-13 | A4 hecha (Claude, autorizado): repositorio `ia-legal-repo` borrado (−51.7 GB). **Etapa A completa.** Siguiente: etapa B el 2026-10-20. |
+| 2026-10-16 | Commit `22bcd7a` subido a `origin/remake/protocolo01-v2` (autorizado). |
+| 2026-10-16 | Cambio al plan (responsable): `protocolo01-app` se conserva **dormido** (D1 privado, D2 solo la imagen `latest`); se cancela B2. Verificado que B4 no lo rompe. Etapa C, en espera hasta que el responsable lo indique. |
+| 2026-10-16 | D1 hecha (Claude, autorizado): `protocolo01-app` privado (403 sin token); el servicio nuevo sigue en 200. Siguiente: D2. |
+| 2026-10-16 | D2 hecha (Claude, autorizado): `gcr.io` reducido a la imagen de la v1. Ojo: las revisiones viejas de `protocolo01-app` (00001–00011) ya no tienen imagen; solo sirven `00012` y `00013` (misma imagen). Queda pendiente confirmar que el tamaño baje a ~5 GB. |
