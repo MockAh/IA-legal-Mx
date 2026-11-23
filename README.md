@@ -1,5 +1,7 @@
 # ⚖️ Asistente Legal Mexicano
 
+**Español** · [English](README.en.md)
+
 Agente RAG especializado en legislación mexicana (legislación básica, SEGOB, transparencia,
 tres poderes, FCE) y trámites de gob.mx. Recupera fragmentos normativos de ChromaDB y redacta
 con DeepSeek.
@@ -16,6 +18,9 @@ con DeepSeek.
 Bases a elegir: **General** (básica + transparencia + tres poderes), **FCE** y **Trámites SEGOB**.
 
 ## Correr en local
+
+Requiere **Python 3.12** (la versión de la imagen de producción); con otra, las dependencias
+fijas pueden no instalarse.
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
@@ -39,6 +44,8 @@ como no disponibles.
 
 Para la interfaz Gradio de legado (`python3 -u app.py`) y los scripts de ingesta
 (`script_embeddings_*.py`, `init_faiss.py`): `pip install -r requirements_local.txt`.
+Si falta `faiss-lista/`, `app.py` arranca con una advertencia y sin búsqueda de títulos (Cita
+Precisa no resuelve nombres de leyes).
 
 ## Desplegar
 
