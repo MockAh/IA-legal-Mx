@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Asistente Legal Mexicano</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,600;1,6..96,400&family=IBM+Plex+Mono:wght@400;500&family=Spectral:ital,wght@0,300;0,400;0,600;1,400&display=swap">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23C6CDD5'/%3E%3Cg stroke='%2313161B' stroke-width='3' fill='none' stroke-linecap='round'%3E%3Cpath d='M32 17v30'/%3E%3Cpath d='M19 23h26'/%3E%3Cpath d='M19 23l-5 11h10z'/%3E%3Cpath d='M45 23l-5 11h10z'/%3E%3Cpath d='M25 47h14'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="stylesheet" href="/web/app.css">
+</head>
+<body>
+
+<div class="lamina">
+
+  <header class="cabecera">
+    <div class="marca">
+      <svg class="sello" viewBox="0 0 64 64" role="img" aria-label="Sello de la plataforma">
+        <defs>
+          <linearGradient id="g-metal" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#FDFDFE"/><stop offset=".3" stop-color="#C6CDD5"/>
+            <stop offset=".52" stop-color="#8E99A5"/><stop offset=".7" stop-color="#EFF2F5"/>
+            <stop offset="1" stop-color="#B3BCC5"/>
+          </linearGradient>
+        </defs>
+        <circle cx="32" cy="32" r="30" fill="url(#g-metal)"/>
+        <circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" stroke-opacity=".28"/>
+        <circle cx="32" cy="32" r="25" fill="none" stroke="#13161B" stroke-opacity=".35" stroke-width=".8"/>
+        <g stroke="#13161B" stroke-opacity=".78" stroke-width="1.6" fill="none" stroke-linecap="round">
+          <path d="M32 17v30"/><path d="M19 23h26"/>
+          <path d="M19 23l-5 11h10z"/><path d="M45 23l-5 11h10z"/>
+          <path d="M25 47h14"/>
+        </g>
+      </svg>
+      <div class="titulos">
+        <h1 data-i18n="marca.titulo">Asistente Legal Mexicano</h1>
+        <p data-i18n="marca.lema">Impulsado por Inteligencia Artificial</p>
+      </div>
+    </div>
+
+    <div class="columna-estado">
+      <div class="idioma" role="group" data-i18n-label="idioma.grupo" aria-label="Idioma de la interfaz">
+        <button type="button" class="lengua" data-idioma="es" aria-pressed="true">ESP</button>
+        <button type="button" class="lengua" data-idioma="en" aria-pressed="false">EN</button>
+      </div>
+      <div class="estado" id="estado-sistema"></div>
+    </div>
+  </header>
+
+  <div class="filete"></div>
+
+  <nav class="pestanas" role="tablist" data-i18n-label="nav.secciones" aria-label="Secciones del agente">
+    <button class="pestana" role="tab" id="t-cita" aria-controls="p-cita" aria-selected="true">
+      <b data-i18n="tab.cita">Cita Precisa</b><span data-i18n="tab.cita.sub">Recuperación literal</span>
+    </button>
+    <button class="pestana" role="tab" id="t-razon" aria-controls="p-razon" aria-selected="false" tabindex="-1">
+      <b data-i18n="tab.razon">Razonamiento Jurídico</b><span data-i18n="tab.razon.sub">Síntesis fundada</span>
+    </button>
+    <button class="pestana" role="tab" id="t-catalogo" aria-controls="p-catalogo" aria-selected="false" tabindex="-1">
+      <b data-i18n="tab.catalogo">Catálogo FAISS</b><span data-i18n="tab.catalogo.sub">Acervo indexado</span>
+    </button>
+  </nav>
+
+  <!-- ══ CITA PRECISA ═══════════════════════════════════════ -->
+  <section class="panel doble" id="p-cita" role="tabpanel" aria-labelledby="t-cita">
+    <aside class="tarjeta">
+      <p class="rotulo" data-i18n="modo.fijo">Modo fijo de esta pestaña</p>
+      <h2 data-i18n="cita.h2">Qué hace Cita Precisa</h2>
+      <p data-i18n-html="cita.p1">Devuelve el <strong>texto literal</strong> de un artículo, tal como está registrado en el acervo. No interpreta, no resume y no agrega comentario: localiza la norma exacta y la entrega con su ley, su número de artículo y su archivo de origen.</p>
+      <p data-i18n="cita.p2">Úsalo cuando ya sabes qué citar y necesitas el texto íntegro para un escrito, un dictamen o una audiencia.</p>
+      <ol class="flujo">
+        <li data-i18n-html="cita.paso1">El modelo extrae de tu consulta el <code>titulo_documento</code> y el <code>Articulo</code>.</li>
+        <li data-i18n-html="cita.paso2">FAISS resuelve el nombre coloquial de la ley contra el título exacto del acervo.</li>
+        <li data-i18n-html="cita.paso3">Chroma filtra por ley, artículo y <code>Transitorio</code>, y regresa el párrafo completo.</li>
+      </ol>
+    </aside>
+
+    <div class="consola">
+      <div class="consola-cabeza">
+        <span class="modo-fijo"><i></i><span data-i18n="cita.modo">Modo: Cita Precisa</span></span>
+        <span class="candado" data-i18n="candado.fijo">Fijo en esta pestaña</span>
+      </div>
+      <div class="cuerpo-consola">
+        <fieldset class="grupo-bases">
+          <legend data-i18n="base.legend">Base de datos</legend>
+          <div class="chips" data-chips="cita">
+            <button class="chip" type="button" aria-pressed="false" data-base="FCE">
+              <b data-i18n="base.fce">FCE</b><span class="sub-base">fce-mx</span>
+            </button>
+            <button class="chip" type="button" aria-pressed="false" data-base="TRAMITES_SEGOB">
+              <b data-i18n="base.tramites">Trámites SEGOB</b><span class="sub-base">segob-mx</span>
+            </button>
+            <button class="chip" type="button" aria-pressed="true" data-base="GENERAL">
+              <b data-i18n="base.general">General</b><span class="sub-base">basic · transp · 3p</span>
+            </button>
+          </div>
+        </fieldset>
+
+        <div class="campo">
+          <textarea id="q-cita" data-i18n-ph="cita.ph" placeholder="Artículo 16 de la Constitución Política de los Estados Unidos Mexicanos"></textarea>
+          <div class="pie-campo">
+            <div class="sugerencias">
+              <button class="sugerencia" type="button" data-i18n="cita.sug1">Artículo 123 de la Ley Federal del Trabajo</button>
+              <button class="sugerencia" type="button" data-i18n="cita.sug2">Artículo 14 de la Constitución</button>
+            </div>
+            <button class="enviar" type="button" id="btn-cita" data-i18n="btn.consultar">Consultar</button>
+          </div>
+        </div>
+
+        <div class="salida">
+          <div class="salida-cabeza">
+            <h3 data-i18n="salida.titulo">Respuesta</h3>
+            <span class="eco" id="eco-cita"></span>
+          </div>
+          <div id="estado-cita"></div>
+          <article class="respuesta literal vacia" id="salida-cita" data-i18n="cita.vacia">
+            Escribe la ley y el artículo que necesitas citar.
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ RAZONAMIENTO JURÍDICO ══════════════════════════════ -->
+  <section class="panel doble" id="p-razon" role="tabpanel" aria-labelledby="t-razon" hidden>
+    <aside class="tarjeta">
+      <p class="rotulo" data-i18n="modo.fijo">Modo fijo de esta pestaña</p>
+      <h2 data-i18n="razon.h2">Qué hace Razonamiento Jurídico</h2>
+      <p data-i18n-html="razon.p1">Recupera los fragmentos normativos pertinentes y redacta una <strong>respuesta argumentada</strong> en tiempo real, citando la fuente de cada afirmación. Es el modo para preguntas abiertas: procedencia, requisitos, plazos, conflictos entre normas.</p>
+      <p data-i18n="razon.p2">La redacción se apoya solo en lo recuperado del acervo. Si la normativa cargada no alcanza para responder, lo dice en lugar de completar por su cuenta.</p>
+      <ol class="flujo">
+        <li data-i18n-html="razon.paso1">Búsqueda híbrida: filtro exacto por ley y artículo, más búsqueda semántica.</li>
+        <li data-i18n-html="razon.paso2">Se arma el contexto con los fragmentos únicos y su metadato de ley.</li>
+        <li data-i18n-html="razon.paso3">El modelo redacta progresivamente y cierra con las fuentes consultadas.</li>
+      </ol>
+    </aside>
+
+    <div class="consola">
+      <div class="consola-cabeza">
+        <span class="modo-fijo"><i></i><span data-i18n="razon.modo">Modo: Razonamiento Jurídico</span></span>
+        <span class="candado" data-i18n="candado.stream">Respuesta progresiva</span>
+      </div>
+      <div class="cuerpo-consola">
+        <fieldset class="grupo-bases">
+          <legend data-i18n="base.legend">Base de datos</legend>
+          <div class="chips" data-chips="razon">
+            <button class="chip" type="button" aria-pressed="false" data-base="FCE">
+              <b data-i18n="base.fce">FCE</b><span class="sub-base">fce-mx</span>
+            </button>
+            <button class="chip" type="button" aria-pressed="false" data-base="TRAMITES_SEGOB">
+              <b data-i18n="base.tramites">Trámites SEGOB</b><span class="sub-base">segob-mx + tramites-mx</span>
+            </button>
+            <button class="chip" type="button" aria-pressed="true" data-base="GENERAL">
+              <b data-i18n="base.general">General</b><span class="sub-base">basic · transp · 3p</span>
+            </button>
+          </div>
+        </fieldset>
+
+        <div class="campo">
+          <textarea id="q-razon" data-i18n-ph="razon.ph" placeholder="¿Qué requisitos debe cumplir un acto de molestia para ser constitucionalmente válido?"></textarea>
+          <div class="pie-campo">
+            <div class="sugerencias">
+              <button class="sugerencia" type="button" data-i18n="razon.sug1">¿Qué dice el artículo 16 constitucional sobre los actos de molestia de la autoridad?</button>
+              <button class="sugerencia" type="button" data-i18n="razon.sug2">¿Cuál es el plazo para responder una solicitud de información?</button>
+            </div>
+            <button class="enviar" type="button" id="btn-razon" data-i18n="btn.analizar">Analizar</button>
+          </div>
+        </div>
+
+        <div class="salida">
+          <div class="salida-cabeza">
+            <h3 data-i18n="salida.titulo">Respuesta</h3>
+            <span class="eco" id="eco-razon"></span>
+          </div>
+          <div id="estado-razon"></div>
+          <article class="respuesta vacia" id="salida-razon" data-i18n="razon.vacia">
+            Plantea tu pregunta en lenguaje natural.
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ CATÁLOGO FAISS ═════════════════════════════════════ -->
+  <section class="panel" id="p-catalogo" role="tabpanel" aria-labelledby="t-catalogo" hidden>
+    <div class="tarjeta" style="margin-bottom:22px">
+      <p class="rotulo" data-i18n="cat.rotulo">Memoria semántica</p>
+      <h2 data-i18n="cat.h2">Qué contiene el Catálogo FAISS</h2>
+      <p data-i18n-html="cat.p1">Es el inventario completo de la jurisdicción cargada en el índice de títulos: toda ley, reglamento o estatuto que el agente puede citar. Se construye leyendo <code>metadata_titulos_leyes.pkl</code> y agrupando por la carpeta de origen dentro de <code>legislacion-mx/</code>.</p>
+      <p data-i18n="cat.p2">Si una norma no aparece aquí, el agente no la tiene y lo dirá en lugar de aproximarla. Es la forma rápida de verificar cobertura antes de confiar una consulta al sistema.</p>
+    </div>
+
+    <div class="tiras">
+      <div class="tira"><b id="n-total">—</b><span data-i18n="cat.tira.leyes">Leyes indexadas</span></div>
+      <div class="tira"><b id="n-materias">—</b><span data-i18n="cat.tira.materias">Materias</span></div>
+      <div class="tira"><b id="n-acervos">—</b><span data-i18n="cat.tira.acervos">Acervos en línea</span></div>
+      <div class="tira"><b>1024</b><span data-i18n="cat.tira.vector">Dimensión del vector</span></div>
+    </div>
+
+    <div class="filtros">
+      <div class="buscador">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <circle cx="7" cy="7" r="5"/><path d="M11 11l4 4" stroke-linecap="round"/>
+        </svg>
+        <label for="buscar-ley" hidden data-i18n="cat.buscar.label">Buscar ley</label>
+        <input id="buscar-ley" type="search" autocomplete="off" data-i18n-ph="cat.buscar.ph"
+               placeholder="Buscar por nombre de ley, reglamento o código…">
+      </div>
+      <div class="materias" id="materias"></div>
+    </div>
+
+    <div id="lista-acervos"></div>
+    <p class="vacio" id="sin-resultados" hidden data-i18n="cat.sin">Ninguna norma del índice coincide con esa búsqueda.</p>
+  </section>
+
+  <p class="nota-pie" data-i18n-html="pie">
+    Las respuestas se construyen únicamente con la normativa cargada en el acervo. Verifica siempre
+    contra la publicación oficial en el <b>Diario Oficial de la Federación</b> antes de usarlas en un
+    escrito con efectos jurídicos.
+  </p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="/web/app.js"></script>
+</body>
+</html>

@@ -1,30 +1,44 @@
-# --- .gitignore ---
+# Dependencias (Súper pesadas)
+node_modules/
+bin/
+obj/
+
+# Entornos virtuales de Python (Muy comunes en Backend)
+venv/
+.venv/
+env/
 __pycache__/
 *.pyc
 
-# Variables de entorno (¡CRÍTICO! No subas tu API KEY)
+# Archivos de configuración sensible
 .env
 
-# Carpetas de Modelos Pesados (Se descargan con tu script, no se suben)
-modelo_e5/
-mis_modelos/
-
-# Bases de datos Vectoriales (Son generadas, no versionadas)
-procesado-mx/
-chroma_db_*/
+# Archivos grandes de datos o logs
+*.log
 *.sqlite3
+data/
+temp/
 
-# Entornos virtuales
-venv/
-env/
-.venv/
+# Archivos de sistema
+.DS_Store
+Thumbs.db
 
-# Bases de Datos
+#Carpetas del proyecto
 Axiomas
-
-#Base titulos
 faiss-lista
+modelo_e5
+procesado-mx
 
-# Otros
+# Classic
+llamada_deepseek.txt.env
+venv/
+.venv/
 llamada_deepseek.txt
+modelo_e5/
+procesado-mx/
+procesado-unam/
+faiss-lista/
+__pycache__/
+
+# Metadatos de Windows al copiar archivos
 *:Zone.Identifier

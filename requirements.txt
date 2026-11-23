@@ -1,26 +1,24 @@
-# --- Core ---
-gradio==3.50.2
-flask
-gunicorn
-requests
-python-dotenv
-tqdm
-argparse
+# requirements.txt — Producción (imagen protocolo01-v2-pesada)
+# Versiones fijadas desde el venv local que abre el acervo (F1-10, F3-02).
+# torch NO va aquí: Dockerfile.pesada lo instala desde el índice de CPU.
+# Desarrollo local e ingesta: requirements_local.txt
 
-# --- LangChain ---
-langchain
-langchain-community
-langchain-core
-langchain-huggingface
-langchain-chroma
+# --- Servidor ---
+fastapi==0.128.0
+pydantic==2.12.5
+uvicorn[standard]==0.40.0
+requests==2.32.5
+python-dotenv==1.2.1
 
-# --- Datos ---
-chromadb
-sentence-transformers
-torch --index-url https://download.pytorch.org/whl/cpu
-# transformers           <-- ¡BORRADO!
-numpy
-faiss-cpu
+# --- Vectores ---
+chromadb==1.4.0
+pysqlite3-binary==0.5.4.post2
+faiss-cpu==1.13.2
+numpy==1.26.4
 
-pysqlite3-binary
-python-docx
+# --- Embeddings ---
+langchain-core==1.2.5
+langchain-huggingface==1.2.0
+sentence-transformers==5.2.0
+transformers==4.57.3
+huggingface-hub==0.36.0

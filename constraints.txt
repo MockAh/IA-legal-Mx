@@ -1,0 +1,107 @@
+# constraints.txt — Versiones exactas de las dependencias INDIRECTAS de producción
+# Uso: pip install -r requirements.txt -c constraints.txt   (Dockerfile.pesada)
+#
+# Por qué: requirements.txt fija los paquetes directos; este archivo fija lo que ellos traen,
+# con las versiones del venv local que abre el acervo (F1-10, F3-05b). Sin esto, cada build
+# de la imagen pesada podría traer versiones nuevas no probadas.
+#
+# Cómo regenerarlo (si se actualiza algo en requirements.txt):
+#   1. pip install --dry-run -r requirements.txt  → lista de lo que se instalaría
+#   2. tomar esas versiones de un entorno ya probado (pip freeze), sin los directos ni torch
+#   3. validar con: pip install --dry-run -r requirements.txt -c constraints.txt
+# Generado: 2026-10-13
+annotated-doc==0.0.4
+annotated-types==0.7.0
+anyio==4.12.0
+attrs==25.4.0
+backoff==2.2.1
+bcrypt==5.0.0
+build==1.3.0
+cachetools==6.2.4
+certifi==2025.11.12
+charset-normalizer==3.4.4
+click==8.3.1
+coloredlogs==15.0.1
+distro==1.9.0
+durationpy==0.10
+filelock==3.20.1
+flatbuffers==25.12.19
+fsspec==2025.12.0
+google-auth==2.45.0
+googleapis-common-protos==1.72.0
+grpcio==1.76.0
+h11==0.16.0
+hf-xet==1.2.0
+httpcore==1.0.9
+httptools==0.7.1
+httpx==0.28.1
+humanfriendly==10.0
+idna==3.11
+importlib-metadata==8.7.1
+importlib-resources==6.5.2
+jinja2==3.1.6
+joblib==1.5.3
+jsonpatch==1.33
+jsonpointer==3.0.0
+jsonschema-specifications==2025.9.1
+jsonschema==4.25.1
+kubernetes==34.1.0
+langsmith==0.5.1
+markdown-it-py==4.0.0
+markupsafe==2.1.5
+mdurl==0.1.2
+mmh3==5.2.0
+mpmath==1.3.0
+networkx==3.6.1
+oauthlib==3.3.1
+onnxruntime==1.23.2
+opentelemetry-api==1.39.1
+opentelemetry-exporter-otlp-proto-common==1.39.1
+opentelemetry-exporter-otlp-proto-grpc==1.39.1
+opentelemetry-proto==1.39.1
+opentelemetry-sdk==1.39.1
+opentelemetry-semantic-conventions==0.60b1
+orjson==3.11.5
+overrides==7.7.0
+packaging==25.0
+posthog==5.4.0
+protobuf==6.33.2
+pyasn1-modules==0.4.2
+pyasn1==0.6.1
+pybase64==1.4.3
+pydantic-core==2.41.5
+pygments==2.19.2
+pypika==0.48.9
+pyproject-hooks==1.2.0
+python-dateutil==2.9.0.post0
+pyyaml==6.0.3
+referencing==0.37.0
+regex==2025.11.3
+requests-oauthlib==2.0.0
+requests-toolbelt==1.0.0
+rich==14.2.0
+rpds-py==0.30.0
+rsa==4.9.1
+safetensors==0.7.0
+scikit-learn==1.8.0
+scipy==1.16.3
+setuptools==80.9.0
+shellingham==1.5.4
+six==1.17.0
+starlette==0.50.0
+sympy==1.14.0
+tenacity==9.1.2
+threadpoolctl==3.6.0
+tokenizers==0.22.1
+tqdm==4.67.1
+typer==0.21.0
+typing-extensions==4.15.0
+typing-inspection==0.4.2
+urllib3==2.3.0
+uuid-utils==0.12.0
+uvloop==0.22.1
+watchfiles==1.1.1
+websocket-client==1.9.0
+websockets==11.0.3
+zipp==3.23.0
+zstandard==0.25.0
